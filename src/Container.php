@@ -6,8 +6,9 @@ use Throwable;
 
 use Psr\Container\ContainerInterface;
 
-use Quanta\Container\ContainerException;
 use Quanta\Container\NotFoundException;
+use Quanta\Container\ContainerException;
+use Quanta\Container\FactoryTypeException;
 
 final class Container implements ContainerInterface
 {
@@ -103,12 +104,16 @@ final class Container implements ContainerInterface
             return $this->entries[$id];
         }
 
+        // no double lookup thanks to the null coalesce operator.
+        // no useless call to is_callable until an exception is thrown.
         if ($factory = $this->factories[$id] ?? false) {
             try {
                 return $this->entries[$id] = $factory($this);
             }
             catch (Throwable $e) {
-                throw new ContainerException($id, $e);
+                throw is_callable($factory)
+                    ? new ContainerException($id, $e)
+                    : new FactoryTypeException($id);
             }
         }
 

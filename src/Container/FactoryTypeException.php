@@ -4,9 +4,9 @@ namespace Quanta\Container;
 
 use Exception;
 
-use Psr\Container\NotFoundExceptionInterface;
+use Psr\Container\ContainerExceptionInterface;
 
-class NotFoundException extends Exception implements NotFoundExceptionInterface
+class FactoryTypeException extends Exception implements ContainerExceptionInterface
 {
     /**
      * Constructor.
@@ -15,7 +15,7 @@ class NotFoundException extends Exception implements NotFoundExceptionInterface
      */
     public function __construct(string $id)
     {
-        $tpl = "No entry '%s' was found in the container.";
+        $tpl = "Failed to get the entry '%s' from the container because its factory is not a callable.";
 
         $msg = sprintf($tpl, $id);
 

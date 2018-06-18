@@ -3,8 +3,9 @@
 use function Eloquent\Phony\Kahlan\stub;
 
 use Quanta\Container;
-use Quanta\Container\ContainerException;
 use Quanta\Container\NotFoundException;
+use Quanta\Container\ContainerException;
+use Quanta\Container\FactoryTypeException;
 
 describe('Container', function () {
 
@@ -185,49 +186,71 @@ describe('Container', function () {
 
             context('when the given id is associated with a factory', function () {
 
-                context('when the factory does not throw an exception', function () {
+                context('when the factory is a callable', function () {
 
-                    it('should call the factory with the container as parameter', function () {
+                    context('when the factory does not throw an exception', function () {
 
-                        $this->container->get('factory1');
-
-                        $this->factory->calledWith($this->container);
-
-                    });
-
-                    it('should return the value produced by the factory', function () {
-
-                        $instance = new class {};
-
-                        $this->factory->returns($instance);
-
-                        $test = $this->container->get('factory1');
-
-                        expect($test)->toBe($instance);
-
-                    });
-
-                    context('when called multiple times with the same id', function () {
-
-                        it('should call the factory only once', function () {
+                        it('should call the factory with the container as parameter', function () {
 
                             $this->container->get('factory1');
-                            $this->container->get('factory1');
 
-                            $this->factory->once()->called();
+                            $this->factory->calledWith($this->container);
 
                         });
 
-                        it('should return the same value', function () {
+                        it('should return the value produced by the factory', function () {
 
                             $instance = new class {};
 
                             $this->factory->returns($instance);
 
-                            $test1 = $this->container->get('factory1');
-                            $test2 = $this->container->get('factory1');
+                            $test = $this->container->get('factory1');
 
-                            expect($test1)->toBe($test2);
+                            expect($test)->toBe($instance);
+
+                        });
+
+                        context('when called multiple times with the same id', function () {
+
+                            it('should call the factory only once', function () {
+
+                                $this->container->get('factory1');
+                                $this->container->get('factory1');
+
+                                $this->factory->once()->called();
+
+                            });
+
+                            it('should return the same value', function () {
+
+                                $instance = new class {};
+
+                                $this->factory->returns($instance);
+
+                                $test1 = $this->container->get('factory1');
+                                $test2 = $this->container->get('factory1');
+
+                                expect($test1)->toBe($test2);
+
+                            });
+
+                        });
+
+                    });
+
+                    context('when the factory throws an exception', function () {
+
+                        it('should throw a ContainerException wrapped around the exception', function () {
+
+                            $exception = new Exception;
+
+                            $this->factory->throws($exception);
+
+                            $test = function () { $this->container->get('factory1'); };
+
+                            $expected = new ContainerException('factory1', $exception);
+
+                            expect($test)->toThrow($expected);
 
                         });
 
@@ -235,19 +258,19 @@ describe('Container', function () {
 
                 });
 
-                context('when the factory throws an exception', function () {
+                context('when the factory is not a callable', function () {
 
-                    it('should throw a ContainerException wrapped around the exception', function () {
+                    it('should throw a FactoryTypeException', function () {
 
-                        $exception = new Exception;
+                        $container = new Container([], ['factory' => 'callable']);
 
-                        $this->factory->throws($exception);
+                        $test = function () use ($container) {
+                            $container->get('factory');
+                        };
 
-                        $test = function () { $this->container->get('factory1'); };
+                        $exception = new FactoryTypeException('factory');
 
-                        $expected = new ContainerException('factory1', $exception);
-
-                        expect($test)->toThrow($expected);
+                        expect($test)->toThrow($exception);
 
                     });
 
