@@ -31,7 +31,7 @@ final class Container implements ContainerInterface
      * @param array         $entries
      * @param callable[]    $factories
      */
-    public function __construct(array $entries, array $factories = [])
+    public function __construct(array $entries = [], array $factories = [])
     {
         $this->entries = $entries;
         $this->factories = $factories;
