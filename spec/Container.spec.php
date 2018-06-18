@@ -21,15 +21,54 @@ describe('Container', function () {
 
     });
 
-    describe('->withEntries()', function () {
+    describe('->withEntry()', function () {
 
-        it('should return a new Container', function () {
+        context('when the given id is not already associated with an entry', function () {
 
-            $test = $this->container->withEntries([]);
+            it('should return a new container with an additional entry', function () {
 
-            expect($test)->not->toBe($this->container);
+                $entry2 = new class {};
+
+                $test = $this->container->withEntry('entry2', $entry2);
+
+                $container = new Container([
+                    'entry1' => $this->entry,
+                    'entry2' => $entry2,
+                ], [
+                    'factory1' => $this->factory,
+                ]);
+
+                expect($test)->not->toBe($this->container);
+                expect($test)->toEqual($container);
+
+            });
 
         });
+
+        context('when the given id is already associated with an entry', function () {
+
+            it('should return a new container with the given entry associated with the given id', function () {
+
+                $entry1 = new class {};
+
+                $test = $this->container->withEntry('entry1', $entry1);
+
+                $container = new Container([
+                    'entry1' => $entry1,
+                ], [
+                    'factory1' => $this->factory,
+                ]);
+
+                expect($test)->not->toBe($this->container);
+                expect($test)->toEqual($container);
+
+            });
+
+        });
+
+    });
+
+    describe('->withEntries()', function () {
 
         it('should return a new Container with additional entries', function () {
 
@@ -48,21 +87,61 @@ describe('Container', function () {
                 'factory1' => $this->factory,
             ]);
 
+            expect($test)->not->toBe($this->container);
             expect($test)->toEqual($container);
 
         });
 
     });
 
-    describe('->withFactories()', function () {
+    describe('->withFactory()', function () {
 
-        it('should return a new Container', function () {
+        context('when the given id is not already associated with a factory', function () {
 
-            $test = $this->container->withFactories([]);
+            it('should return a new container with an additional factory', function () {
 
-            expect($test)->not->toBe($this->container);
+                $factory2 = stub();
+
+                $test = $this->container->withFactory('factory2', $factory2);
+
+                $container = new Container([
+                    'entry1' => $this->entry,
+                ], [
+                    'factory1' => $this->factory,
+                    'factory2' => $factory2,
+                ]);
+
+                expect($test)->not->toBe($this->container);
+                expect($test)->toEqual($container);
+
+            });
 
         });
+
+        context('when the given id is already associated with a factory', function () {
+
+            it('should return a new container with the given factory associated with the given id', function () {
+
+                $factory1 = stub();
+
+                $test = $this->container->withFactory('factory1', $factory1);
+
+                $container = new Container([
+                    'entry1' => $this->entry,
+                ], [
+                    'factory1' => $factory1,
+                ]);
+
+                expect($test)->not->toBe($this->container);
+                expect($test)->toEqual($container);
+
+            });
+
+        });
+
+    });
+
+    describe('->withFactories()', function () {
 
         it('should return a new Container with additional factories', function () {
 
@@ -81,6 +160,7 @@ describe('Container', function () {
                 'factory2' => $factory2,
             ]);
 
+            expect($test)->not->toBe($this->container);
             expect($test)->toEqual($container);
 
         });
