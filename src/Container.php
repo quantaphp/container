@@ -103,9 +103,9 @@ final class Container implements ContainerInterface
             return $this->entries[$id];
         }
 
-        if (isset($this->factories[$id])) {
+        if ($factory = $this->factories[$id] ?? false) {
             try {
-                return $this->entries[$id] = $this->factories[$id]($this);
+                return $this->entries[$id] = $factory($this);
             }
             catch (Throwable $e) {
                 throw new ContainerException($id, $e);
