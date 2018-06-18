@@ -113,7 +113,7 @@ final class Container implements ContainerInterface
             catch (Throwable $e) {
                 throw is_callable($factory)
                     ? new ContainerException($id, $e)
-                    : new FactoryTypeException($id);
+                    : new FactoryTypeException($id, $factory);
             }
         }
 

@@ -8,7 +8,7 @@ describe('NotFoundException', function () {
 
     it('should implement NotFoundExceptionInterface', function () {
 
-        $test = new NotFoundException('notfound');
+        $test = new NotFoundException('id');
 
         expect($test)->toBeAnInstanceOf(NotFoundExceptionInterface::class);
 

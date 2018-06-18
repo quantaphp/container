@@ -262,13 +262,13 @@ describe('Container', function () {
 
                     it('should throw a FactoryTypeException', function () {
 
-                        $container = new Container([], ['factory' => 'callable']);
+                        $container = new Container([], ['factory' => 'notacallable']);
 
                         $test = function () use ($container) {
                             $container->get('factory');
                         };
 
-                        $exception = new FactoryTypeException('factory');
+                        $exception = new FactoryTypeException('factory', 'notacallable');
 
                         expect($test)->toThrow($exception);
 
