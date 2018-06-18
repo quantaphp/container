@@ -41,7 +41,7 @@ final class Container implements ContainerInterface
      * Return a new container with an additional entry.
      *
      * When an entry is already associated with the given id, it is overwritten
-     * by the given entry.
+     * by the given entry in the new container.
      *
      * @param string    $id
      * @param mixed     $entry
@@ -69,7 +69,7 @@ final class Container implements ContainerInterface
      * Return a new container with an additional factory.
      *
      * When a factory is already associated with the given id, it is overwritten
-     * by the given factory.
+     * by the given factory in the new container.
      *
      * @param string    $id
      * @param callable  $factory
