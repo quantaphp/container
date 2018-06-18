@@ -9,7 +9,7 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container\ContainerException;
 use Quanta\Container\NotFoundException;
 
-class Container implements ContainerInterface
+final class Container implements ContainerInterface
 {
     /**
      * The id to entry map.
