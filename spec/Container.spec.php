@@ -42,10 +42,10 @@ describe('Container', function () {
             ]);
 
             $container = new Container([
-                'factory1' => $this->factory,
-            ], [
                 'entry1' => $entry1,
                 'entry2' => $entry2,
+            ], [
+                'factory1' => $this->factory,
             ]);
 
             expect($test)->toEqual($container);
@@ -75,10 +75,10 @@ describe('Container', function () {
             ]);
 
             $container = new Container([
+                'entry1' => $this->entry,
+            ], [
                 'factory1' => $factory1,
                 'factory2' => $factory2,
-            ], [
-                'entry1' => $this->entry,
             ]);
 
             expect($test)->toEqual($container);

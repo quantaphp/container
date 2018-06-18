@@ -46,7 +46,7 @@ class Container implements ContainerInterface
      */
     public function withEntries(array $entries): Container
     {
-        return new Container($this->factories, $entries + $this->entries);
+        return new Container($entries + $this->entries, $this->factories);
     }
 
     /**
@@ -58,7 +58,7 @@ class Container implements ContainerInterface
      */
     public function withFactories(array $factories): Container
     {
-        return new Container($factories + $this->factories, $this->entries);
+        return new Container($this->entries, $factories + $this->factories);
     }
 
     /**
