@@ -2,6 +2,7 @@
 
 namespace Quanta;
 
+use stdClass;
 use Throwable;
 
 use Psr\Container\ContainerInterface;
@@ -13,64 +14,66 @@ use Quanta\Container\FactoryTypeException;
 final class Container implements ContainerInterface
 {
     /**
-     * The id to entry map.
+     * The map used by the container to retrieve entries.
      *
-     * @var array
-     */
-    private $entries;
-
-    /**
-     * The id to factory map.
+     * Ids are mapped to anonymous objects with a {0} attribute containing a
+     * factory and an optional {1} attribute containing the value produced by
+     * this factory.
      *
-     * @var callable[]
+     * It allows to bind the factories and their results together in order to
+     * perform only one lookup in this map when using `get($id)`.
+     *
+     * @var \stdClass[]
      */
-    private $factories;
+    private $map;
 
     /**
      * Constructor.
      *
-     * @param array         $entries
+     * Wrap anonymous objects around the given factories and merge them with the
+     * previous ones. The new anonymous objects overwrite the previous ones
+     * associated with the same ids.
+     *
+     * Not so good to have code in constructor but this is the only way both to
+     * let the end user build a container with the actual factories and to have
+     * a data structure allowing a single lookup get method.
+     *
      * @param callable[]    $factories
+     * @param \stdClass[]   $previous
      */
-    public function __construct(array $entries = [], array $factories = [])
+    public function __construct(array $factories, array $previous = [])
     {
-        $this->entries = $entries;
-        $this->factories = $factories;
+        $this->map = $this->map($factories) + $previous;
     }
 
     /**
-     * Return a new container with an additional entry.
+     * Wrap an anonymous object around the given factory.
      *
-     * When an entry is already associated with the given id, it is overwritten
-     * by the given entry in the new container.
+     * `$factory` is mixed because the container is instantiated with an array,
+     * so the factory can have any type. `get($id)` will fail nicely when `$id`
+     * is associated with a non callable factory.
      *
-     * @param string    $id
-     * @param mixed     $entry
-     * @return \Quanta\Container
+     * @param mixed $factory
+     * @return \stdClass
      */
-    public function withEntry(string $id, $entry): Container
+    private function o($factory): stdClass
     {
-        return new Container([$id => $entry] + $this->entries, $this->factories);
+        return (object) [$factory];
     }
 
     /**
-     * Return a new container with additional entries.
+     * Wrap anonymous objects around the given factories.
      *
-     * @param array $entries
-     * @return \Quanta\Container
+     * @param callable[] $factories
+     * @return \stdClass[]
      */
-    public function withEntries(array $entries): Container
+    private function map(array $factories): array
     {
-        return array_reduce(array_keys($entries), function ($container, $id) use ($entries) {
-            return $container->withEntry($id, $entries[$id]);
-        }, $this);
+        return array_map([$this, 'o'], $factories);
     }
 
     /**
      * Return a new container with an additional factory.
-     *
-     * When a factory is already associated with the given id, it is overwritten
-     * by the given factory in the new container.
      *
      * @param string    $id
      * @param callable  $factory
@@ -78,7 +81,7 @@ final class Container implements ContainerInterface
      */
     public function withFactory(string $id, callable $factory): Container
     {
-        return new Container($this->entries, [$id => $factory] + $this->factories);
+        return new Container([$id => $factory], $this->map);
     }
 
     /**
@@ -89,9 +92,7 @@ final class Container implements ContainerInterface
      */
     public function withFactories(array $factories): Container
     {
-        return array_reduce(array_keys($factories), function ($container, $id) use ($factories) {
-            return $container->withFactory($id, $factories[$id]);
-        }, $this);
+        return new Container($factories, $this->map);
     }
 
     /**
@@ -99,25 +100,25 @@ final class Container implements ContainerInterface
      */
     public function get($id)
     {
-        // use array_key_exists instead of isset because an entry can be null.
-        if (array_key_exists($id, $this->entries)) {
-            return $this->entries[$id];
-        }
-
         // no double lookup thanks to the null coalesce operator.
-        // no useless call to is_callable until an exception is thrown.
-        if ($factory = $this->factories[$id] ?? false) {
-            try {
-                return $this->entries[$id] = $factory($this);
-            }
-            catch (Throwable $e) {
-                throw is_callable($factory)
-                    ? new ContainerException($id, $e)
-                    : new FactoryTypeException($id, $factory);
-            }
-        }
+        $o = $this->map[$id] ?? false;
 
-        throw new NotFoundException($id);
+        if (! $o) throw new NotFoundException($id);
+
+        // $o->{0} contains the factory.
+        // $o->{1} contains the factory results when present.
+        if (property_exists($o, '1')) return $o->{1};
+
+        // execute the factory and store its result in $o->{1}.
+        // check if the factory is actually a callable only on failure.
+        try {
+            return $o->{1} = ($o->{0})($this);
+        }
+        catch (Throwable $e) {
+            throw is_callable($o->{0})
+                ? new ContainerException($id, $e)
+                : new FactoryTypeException($id, $o->{0});
+        }
     }
 
     /**
@@ -125,8 +126,6 @@ final class Container implements ContainerInterface
      */
     public function has($id)
     {
-        // use array_key_exists instead of isset because an entry can be null.
-        return array_key_exists($id, $this->entries)
-            ?: isset($this->factories[$id]);
+        return isset($this->map[$id]);
     }
 }
