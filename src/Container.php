@@ -2,7 +2,6 @@
 
 namespace Quanta;
 
-use stdClass;
 use Throwable;
 
 use Psr\Container\ContainerInterface;
@@ -16,22 +15,22 @@ final class Container implements ContainerInterface
     /**
      * The map used by the container to retrieve entries.
      *
-     * Ids are mapped to anonymous objects with a {0} attribute containing a
-     * factory and an optional {1} attribute containing the value produced by
-     * this factory.
+     * Ids are actually mapped to arrays containing a factory as first element
+     * and eventually the value produced by this factory as second element (set
+     * when using the `get($id)` method).
      *
      * It allows to bind the factories and their results together in order to
      * perform only one lookup in this map when using `get($id)`.
      *
-     * @var \stdClass[]
+     * @var array[]
      */
     private $map;
 
     /**
      * Constructor.
      *
-     * Wrap anonymous objects around the given factories and merge them with the
-     * previous ones. The new anonymous objects overwrite the previous ones
+     * Build a map by putting the given factories inside arrays and merge it
+     * with the previous map. The new factories overwrite the previous ones
      * associated with the same ids.
      *
      * Not so good to have code in constructor but this is the only way both to
@@ -39,7 +38,7 @@ final class Container implements ContainerInterface
      * a data structure allowing a single lookup get method.
      *
      * @param callable[]    $factories
-     * @param \stdClass[]   $previous
+     * @param array[]       $previous
      */
     public function __construct(array $factories, array $previous = [])
     {
@@ -47,29 +46,29 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Wrap an anonymous object around the given factory.
+     * Put an array around the given factory.
      *
      * `$factory` is mixed because the container is instantiated with an array,
-     * so the factory can have any type. `get($id)` will fail nicely when `$id`
-     * is associated with a non callable factory.
+     * so the factory can have any type. `get($id)` will fail nicely when the
+     * factory is not a callable.
      *
      * @param mixed $factory
-     * @return \stdClass
+     * @return array
      */
-    private function o($factory): stdClass
+    private function array($factory): array
     {
-        return (object) [$factory];
+        return [$factory];
     }
 
     /**
-     * Wrap anonymous objects around the given factories.
+     * Build a map by putting the given factories inside arrays.
      *
      * @param callable[] $factories
-     * @return \stdClass[]
+     * @return array[]
      */
     private function map(array $factories): array
     {
-        return array_map([$this, 'o'], $factories);
+        return array_map([$this, 'array'], $factories);
     }
 
     /**
@@ -100,24 +99,25 @@ final class Container implements ContainerInterface
      */
     public function get($id)
     {
-        // no double lookup thanks to the null coalesce operator.
-        $o = $this->map[$id] ?? false;
+        // $ref[0] contains the factory.
+        // $ref[1] contains the factory results when present.
+        $ref = &$this->map[$id];
 
-        if (! $o) throw new NotFoundException($id);
+        // fail when the entry is not in the map.
+        if ($ref === null) throw new NotFoundException($id);
 
-        // $o->{0} contains the factory.
-        // $o->{1} contains the factory results when present.
-        if (property_exists($o, '1')) return $o->{1};
+        // return the entry when already built.
+        if (count($ref) == 2) return $ref[1];
 
-        // execute the factory and store its result in $o->{1}.
+        // execute the factory and store its result in $ref[1].
         // check if the factory is actually a callable only on failure.
         try {
-            return $o->{1} = ($o->{0})($this);
+            return $ref[1] = ($ref[0])($this);
         }
         catch (Throwable $e) {
-            throw is_callable($o->{0})
+            throw is_callable($ref[0])
                 ? new ContainerException($id, $e)
-                : new FactoryTypeException($id, $o->{0});
+                : new FactoryTypeException($id, $ref[0]);
         }
     }
 
