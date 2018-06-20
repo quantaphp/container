@@ -22,7 +22,7 @@ describe('Container', function () {
 
     });
 
-    describe('->withFactory()', function () {
+    describe('->with()', function () {
 
         context('when the given id is not already associated with a factory', function () {
 
@@ -30,7 +30,7 @@ describe('Container', function () {
 
                 $factory3 = stub();
 
-                $test = $this->container->withFactory('factory3', $factory3);
+                $test = $this->container->with('factory3', $factory3);
 
                 $container = new Container([
                     'factory1' => $this->factory1,
@@ -51,7 +51,7 @@ describe('Container', function () {
 
                 $factory1 = stub();
 
-                $test = $this->container->withFactory('factory1', $factory1);
+                $test = $this->container->with('factory1', $factory1);
 
                 $container = new Container([
                     'factory1' => $factory1,

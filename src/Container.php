@@ -78,7 +78,7 @@ final class Container implements ContainerInterface
      * @param callable  $factory
      * @return \Quanta\Container
      */
-    public function withFactory(string $id, callable $factory): Container
+    public function with(string $id, callable $factory): Container
     {
         return new Container([$id => $factory], $this->map);
     }
