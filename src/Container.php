@@ -42,11 +42,11 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories, array $previous = [])
     {
-        $this->map = $this->map($factories) + $previous;
+        $this->map = $this->arrays($factories) + $previous;
     }
 
     /**
-     * Put an array around the given factory.
+     * Wrap the given factory inside an array.
      *
      * `$factory` is mixed because the container is instantiated with an array,
      * so the factory can have any type. `get($id)` will fail nicely when the
@@ -61,12 +61,12 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Build a map by putting the given factories inside arrays.
+     * Wrap all the given factories inside arrays.
      *
      * @param callable[] $factories
      * @return array[]
      */
-    private function map(array $factories): array
+    private function arrays(array $factories): array
     {
         return array_map([$this, 'array'], $factories);
     }
