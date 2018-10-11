@@ -3,6 +3,8 @@
 use function Eloquent\Phony\Kahlan\stub;
 use function Eloquent\Phony\Kahlan\mock;
 
+use Psr\Container\ContainerInterface;
+
 use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
@@ -10,215 +12,172 @@ use Quanta\Container\FactoryTypeException;
 
 describe('Container', function () {
 
-    beforeEach(function () {
+    context('when all the given factories are callables', function () {
 
-        $this->factory1 = stub();
-        $this->factory2 = stub();
+        beforeEach(function () {
 
-        $this->container = new Container([
-            'factory1' => $this->factory1,
-            'factory2' => $this->factory2,
-        ]);
+            $this->factory1 = stub();
+            $this->factory2 = stub();
 
-    });
-
-    describe('->with()', function () {
-
-        context('when the given id is not already associated with a factory', function () {
-
-            it('should return a new Container with an additional factory', function () {
-
-                $factory3 = stub();
-
-                $test = $this->container->with('factory3', $factory3);
-
-                $container = new Container([
-                    'factory1' => $this->factory1,
-                    'factory2' => $this->factory2,
-                    'factory3' => $factory3,
-                ]);
-
-                expect($test)->not->toBe($this->container);
-                expect($test)->toEqual($container);
-
-            });
-
-        });
-
-        context('when the given id is already associated with a factory', function () {
-
-            it('should return a new Container with the given factory associated with the given id', function () {
-
-                $factory1 = stub();
-
-                $test = $this->container->with('factory1', $factory1);
-
-                $container = new Container([
-                    'factory1' => $factory1,
-                    'factory2' => $this->factory2,
-                ]);
-
-                expect($test)->not->toBe($this->container);
-                expect($test)->toEqual($container);
-
-            });
-
-        });
-
-    });
-
-    describe('->withFactories()', function () {
-
-        it('should return a new Container with additional factories', function () {
-
-            $factory1 = stub();
-            $factory3 = stub();
-
-            $test = $this->container->withFactories([
-                'factory1' => $factory1,
-                'factory3' => $factory3,
-            ]);
-
-            $container = new Container([
-                'factory1' => $factory1,
+            $this->container = new Container([
+                'factory1' => $this->factory1,
                 'factory2' => $this->factory2,
-                'factory3' => $factory3,
             ]);
 
-            expect($test)->not->toBe($this->container);
-            expect($test)->toEqual($container);
+        });
+
+        it('should implement ContainerInterface', function () {
+
+            expect($this->container)->toBeAnInstanceOf(ContainerInterface::class);
 
         });
 
-    });
+        describe('->with()', function () {
 
-    describe('->get()', function () {
+            context('when the given id is not already associated with a factory', function () {
 
-        context('when the given id is associated with a factory', function () {
+                it('should return a new Container with an additional factory', function () {
 
-            context('when it is the first time ->get() is called with the given id', function () {
+                    $factory3 = stub();
 
-                context('when the factory is a callable', function () {
+                    $test = $this->container->with('factory3', $factory3);
 
-                    it('should call the factory with the container as parameter', function () {
+                    $container = new Container([
+                        'factory1' => $this->factory1,
+                        'factory2' => $this->factory2,
+                        'factory3' => $factory3,
+                    ]);
 
-                        $this->container->get('factory1');
-
-                        $this->factory1->calledWith($this->container);
-
-                    });
-
-                    context('when the factory does not throw an exception', function () {
-
-                        it('should return the value produced by the factory', function () {
-
-                            $instance = new class {};
-
-                            $this->factory1->returns($instance);
-
-                            $test = $this->container->get('factory1');
-
-                            expect($test)->toBe($instance);
-
-                        });
-
-                    });
-
-                    context('when the factory throws an exception', function () {
-
-                        it('should throw a ContainerException wrapped around the exception', function () {
-
-                            $exception = mock(Throwable::class)->get();
-
-                            $this->factory1->throws($exception);
-
-                            $test = function () { $this->container->get('factory1'); };
-
-                            $expected = new ContainerException('factory1', $exception);
-
-                            expect($test)->toThrow($expected);
-
-                        });
-
-                    });
-
-                });
-
-                context('when the factory is not a callable', function () {
-
-                    it('should throw a FactoryTypeException', function () {
-
-                        $container = new Container(['factory' => 'notacallable']);
-
-                        $test = function () use ($container) {
-                            $container->get('factory');
-                        };
-
-                        $exception = new FactoryTypeException('factory', 'notacallable');
-
-                        expect($test)->toThrow($exception);
-
-                    });
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual($container);
 
                 });
 
             });
 
-            context('when ->get() has already been called with the given id', function () {
+            context('when the given id is already associated with a factory', function () {
 
-                context('when the ->get() method returns a non null value for the given id', function () {
+                it('should return a new Container with the given id associated with the given factory', function () {
 
-                    beforeEach(function () {
+                    $factory1 = stub();
 
-                        $this->instance = new class {};
+                    $test = $this->container->with('factory1', $factory1);
 
-                        $this->factory1->returns($this->instance);
+                    $container = new Container([
+                        'factory1' => $factory1,
+                        'factory2' => $this->factory2,
+                    ]);
 
-                        $this->container->get('factory1');
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual($container);
+
+                });
+
+            });
+
+        });
+
+        describe('->withFactories()', function () {
+
+            context('when all the given factories are callables', function () {
+
+                it('should return a new Container with additional factories', function () {
+
+                    $factory1 = stub();
+                    $factory3 = stub();
+
+                    $test = $this->container->withFactories([
+                        'factory1' => $factory1,
+                        'factory3' => $factory3,
+                    ]);
+
+                    $container = new Container([
+                        'factory1' => $factory1,
+                        'factory2' => $this->factory2,
+                        'factory3' => $factory3,
+                    ]);
+
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual($container);
+
+                });
+
+            });
+
+            context('when at least one given factory is not a callable', function () {
+
+                it('should throw an InvalidArgumentException', function () {
+
+                    $test = function () {
+                        $this->container->withFactories([
+                            'factory1' => stub(),
+                            'factory2' => 'factory',
+                        ]);
+                    };
+
+                    expect($test)->toThrow(new InvalidArgumentException);
+
+                });
+
+            });
+
+        });
+
+        describe('->get()', function () {
+
+            context('when the given id is associated with a factory', function () {
+
+                context('when the factory does not throw an exception', function () {
+
+                    it('should return the value produced by the factory', function () {
+
+                        $value = new class {};
+
+                        $this->factory1->with($this->container)->returns($value);
+
+                        $test = $this->container->get('factory1');
+
+                        expect($test)->toBe($value);
 
                     });
 
-                    it('should not call the factory again', function () {
+                    it('should return the same value on multiple calls', function () {
 
+                        $this->factory1->with($this->container)->does(function () {
+                            return new class {};
+                        });
+
+                        $test1 = $this->container->get('factory1');
+                        $test2 = $this->container->get('factory1');
+
+                        expect($test1)->toBe($test2);
+
+                    });
+
+                    it('should cache null values', function () {
+
+                        $this->factory1->with($this->container)->returns(null);
+
+                        $this->container->get('factory1');
                         $this->container->get('factory1');
 
                         $this->factory1->once()->called();
 
                     });
 
-                    it('should return the same value as the one returned on the first call', function () {
-
-                        $test = $this->container->get('factory1');
-
-                        expect($test)->toEqual($this->instance);
-
-                    });
-
                 });
 
-                context('when the ->get() method returns null for the given id', function () {
+                context('when the factory throws an exception', function () {
 
-                    beforeEach(function () {
+                    it('should throw a ContainerException wrapped around the exception', function () {
 
-                        $this->factory1->returns(null);
+                        $exception = mock(Throwable::class)->get();
 
-                        $this->container->get('factory1');
+                        $this->factory1->with($this->container)->throws($exception);
 
-                    });
+                        $test = function () { $this->container->get('factory1'); };
 
-                    it('should not call the factory again', function () {
-
-                        $this->container->get('factory1');
-
-                        $this->factory1->once()->called();
-
-                    });
-
-                    it('should return null', function () {
-
-                        $test = $this->container->get('factory1');
-
-                        expect($test)->toBeNull();
+                        expect($test)->toThrow(new ContainerException('factory1', $exception));
 
                     });
 
@@ -226,17 +185,43 @@ describe('Container', function () {
 
             });
 
+            context('when the given id is not associated with a factory', function () {
+
+                it('should throw a NotFoundException', function () {
+
+                    $test = function () { $this->container->get('notfound'); };
+
+                    expect($test)->toThrow(new NotFoundException('notfound'));
+
+                });
+
+            });
+
         });
 
-        context('when the given id is not associated with a factory', function () {
+        describe('->has()', function () {
 
-            it('should throw a NotFoundException', function () {
+            context('when the given id is associated with a factory', function () {
 
-                $test = function () { $this->container->get('notfound'); };
+                it('should return true', function () {
 
-                $exception = new NotFoundException('notfound');
+                    $test = $this->container->has('factory1');
 
-                expect($test)->toThrow($exception);
+                    expect($test)->toBeTruthy();
+
+                });
+
+            });
+
+            context('when the given id is not associated with a factory', function () {
+
+                it('should return false', function () {
+
+                    $test = $this->container->has('notdefined');
+
+                    expect($test)->toBeFalsy();
+
+                });
 
             });
 
@@ -244,29 +229,18 @@ describe('Container', function () {
 
     });
 
-    describe('->has()', function () {
+    context('when at least one given factory is not a callable', function () {
 
-        context('when the given id is associated with a factory', function () {
+        it('should throw an InvalidArgumentException', function () {
 
-            it('should return true', function () {
+            $test = function () {
+                new Container([
+                    'factory1' => stub(),
+                    'factory2' => 'factory',
+                ]);
+            };
 
-                $test = $this->container->has('factory1');
-
-                expect($test)->toBeTruthy();
-
-            });
-
-        });
-
-        context('when the given id is not associated with a factory', function () {
-
-            it('should return false', function () {
-
-                $test = $this->container->has('notdefined');
-
-                expect($test)->toBeFalsy();
-
-            });
+            expect($test)->toThrow(new InvalidArgumentException);
 
         });
 

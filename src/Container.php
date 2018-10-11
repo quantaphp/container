@@ -2,25 +2,24 @@
 
 namespace Quanta;
 
-use Throwable;
-
 use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Container\FactoryTypeException;
 
 final class Container implements ContainerInterface
 {
     /**
-     * The map used by the container to retrieve entries.
+     * The map used by the container to retrieve entry values from their ids.
      *
-     * Ids are actually mapped to arrays containing a factory as first element
-     * and eventually the value produced by this factory as second element (set
-     * when using the `get($id)` method).
+     * Ids are actually mapped to arrays containing one or two elements:
+     * - the first one is the factory producing the entry value
+     * - the second one is the value produced by the factory
      *
-     * It allows to bind the factories and their results together in order to
-     * perform only one lookup in this map when using `get($id)`.
+     * The second value is set when `get($id)` is called for the first time and
+     * is then used as a cache on subsequent calls. This way the container only
+     * needs to perform one lookup in this map when retrieving the value of an
+     * entry.
      *
      * @var array[]
      */
@@ -29,50 +28,32 @@ final class Container implements ContainerInterface
     /**
      * Constructor.
      *
-     * Build a map by putting the given factories inside arrays and merge it
-     * with the previous map. The new factories overwrite the previous ones
-     * associated with the same ids.
+     * The map is build by putting the given factories inside arrays and merging
+     * it with the given previous map.
      *
-     * Not so good to have code in constructor but this is the only way both to
-     * let the end user build a container with the actual factories and to have
-     * a data structure allowing a single lookup get method.
+     * The new factories overwrite the previous ones having the same ids.
+     *
+     * An InvalidArgumentException with an useful error message is thrown when
+     * a factory is not a callable.
      *
      * @param callable[]    $factories
      * @param array[]       $previous
+     * @throws \InvalidArgumentException
      */
     public function __construct(array $factories, array $previous = [])
     {
-        $this->map = $this->arrays($factories) + $previous;
+        try {
+            $this->map = array_map([$this, 'array'], $factories) + $previous;
+        }
+        catch (\TypeError $e) {
+            $msg = $this->factoryTypeErrorMessage($factories);
+
+            throw new \InvalidArgumentException($msg);
+        }
     }
 
     /**
-     * Wrap the given factory inside an array.
-     *
-     * `$factory` is mixed because the container is instantiated with an array,
-     * so the factory can have any type. `get($id)` will fail nicely when the
-     * factory is not a callable.
-     *
-     * @param mixed $factory
-     * @return array
-     */
-    private function array($factory): array
-    {
-        return [$factory];
-    }
-
-    /**
-     * Wrap all the given factories inside arrays.
-     *
-     * @param callable[] $factories
-     * @return array[]
-     */
-    private function arrays(array $factories): array
-    {
-        return array_map([$this, 'array'], $factories);
-    }
-
-    /**
-     * Return a new container with an additional factory.
+     * Return a new container with an additional entry.
      *
      * @param string    $id
      * @param callable  $factory
@@ -84,14 +65,27 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Return a new container with additional factories.
+     * Return a new container with many additional entries.
+     *
+     * The eventual InvalidArgumentException thrown from the constructor is
+     * rethrown from here. The reasoning behind this is: if the associative
+     * array values could be type hinted as callable, the exception would be
+     * thrown from this method, not from the constructor.
      *
      * @param callable[] $factories
      * @return \Quanta\Container
+     * @throws \InvalidArgumentException
      */
     public function withFactories(array $factories): Container
     {
-        return new Container($factories, $this->map);
+        try {
+            return new Container($factories, $this->map);
+        }
+        catch (\InvalidArgumentException $e) {
+            $msg = $this->factoryTypeErrorMessage($factories);
+
+            throw new \InvalidArgumentException($msg);
+        }
     }
 
     /**
@@ -99,25 +93,25 @@ final class Container implements ContainerInterface
      */
     public function get($id)
     {
-        // $ref[0] contains the factory.
-        // $ref[1] contains the factory results when present.
+        // see $this->map
         $ref = &$this->map[$id];
 
-        // fail when the entry is not in the map.
+        // Fail when the given id is not present in the map.
         if ($ref === null) throw new NotFoundException($id);
 
-        // return the entry when already built.
+        // Return the entry value when already built.
         if (count($ref) == 2) return $ref[1];
 
-        // execute the factory and store its result in $ref[1].
-        // check if the factory is actually a callable only on failure.
+        // Execute the factory and store the value it produced in $ref[1].
+        // Any uncaught exception is wrapped in a ContainerException because it
+        // allows to keep track of all the entries failing because of this
+        // original exception. This should not be a problem because recovering
+        // from a failling factory should not be a reasonable thing to do.
         try {
             return $ref[1] = ($ref[0])($this);
         }
-        catch (Throwable $e) {
-            throw is_callable($ref[0])
-                ? new ContainerException($id, $e)
-                : new FactoryTypeException($id, $ref[0]);
+        catch (\Throwable $e) {
+            throw new ContainerException($id, $e);
         }
     }
 
@@ -127,5 +121,46 @@ final class Container implements ContainerInterface
     public function has($id)
     {
         return isset($this->map[$id]);
+    }
+
+    /**
+     * Return an array containing the given factory.
+     *
+     * @param callable $factory
+     * @return array
+     */
+    private function array(callable $factory): array
+    {
+        return [$factory];
+    }
+
+    /**
+     * Return whether the given value is not a callable.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    private function notCallable($value): bool
+    {
+        return ! is_callable($value);
+    }
+
+    /**
+     * Return the error message of the exception thrown when a factory is not
+     * a callable.
+     *
+     * @param array $factories
+     * @return string
+     */
+    private function factoryTypeErrorMessage(array $factories): string
+    {
+        $invalid = array_filter($factories, [$this, 'notCallable']);
+
+        $id = key($invalid);
+        $value = current($invalid);
+
+        $tpl = 'the factory associated with \'%s\' is not a callable, %s given';
+
+        return sprintf($tpl, $id, new Printable($value));
     }
 }

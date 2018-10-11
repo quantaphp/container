@@ -16,6 +16,12 @@ describe('ContainerException', function () {
 
     });
 
+    it('should implement Throwable', function () {
+
+        expect($this->exception)->toBeAnInstanceOf(Throwable::class);
+
+    });
+
     it('should implement ContainerExceptionInterface', function () {
 
         expect($this->exception)->toBeAnInstanceOf(ContainerExceptionInterface::class);

@@ -2,11 +2,9 @@
 
 namespace Quanta\Container;
 
-use Exception;
-
 use Psr\Container\NotFoundExceptionInterface;
 
-class NotFoundException extends Exception implements NotFoundExceptionInterface
+class NotFoundException extends \Exception implements NotFoundExceptionInterface
 {
     /**
      * Constructor.
@@ -15,7 +13,7 @@ class NotFoundException extends Exception implements NotFoundExceptionInterface
      */
     public function __construct(string $id)
     {
-        $tpl = "No entry '%s' was found in the container.";
+        $tpl = 'no \'%s\' entry defined in the container';
 
         $msg = sprintf($tpl, $id);
 
