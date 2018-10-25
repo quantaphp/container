@@ -1,7 +1,7 @@
 {
     "name": "quanta/container",
     "type": "library",
-    "description": "Minimalist implementation of Psr-11",
+    "description": "Minimalist dependency injection container implementing Psr-11",
     "keywords": [
         "psr-11",
         "container",

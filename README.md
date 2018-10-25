@@ -1,6 +1,6 @@
 # Quanta Psr-11 container
 
-This package provides a minimalist container implementing the  [Psr-11](https://www.php-fig.org/psr/psr-11/) standard.
+This package provides a minimalist dependency injection container implementing [Psr-11](https://www.php-fig.org/psr/psr-11/).
 
 - [Getting started](#getting-started)
 - [Philosophy](#philosophy)
