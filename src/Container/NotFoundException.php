@@ -13,7 +13,7 @@ class NotFoundException extends \Exception implements NotFoundExceptionInterface
      */
     public function __construct(string $id)
     {
-        $tpl = 'no \'%s\' entry defined in the container';
+        $tpl = 'No \'%s\' entry defined in the container';
 
         $msg = sprintf($tpl, $id);
 

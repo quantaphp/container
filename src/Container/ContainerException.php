@@ -14,7 +14,7 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
      */
     public function __construct(string $id, \Throwable $previous)
     {
-        $tpl = 'uncaught exception thrown when retrieving the \'%s\' entry from the container';
+        $tpl = 'The factory producing the \'%s\' container entry has thrown an uncaught exception';
 
         $msg = sprintf($tpl, $id);
 

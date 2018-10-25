@@ -159,7 +159,7 @@ final class Container implements ContainerInterface
         $id = key($invalid);
         $value = current($invalid);
 
-        $tpl = 'the factory associated with \'%s\' is not a callable, %s given';
+        $tpl = 'The \'%s\' container entry is associated to %s, callable expected';
 
         return sprintf($tpl, $id, new Printable($value));
     }
