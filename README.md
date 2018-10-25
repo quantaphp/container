@@ -17,7 +17,7 @@ This package provides a minimalist container implementing the  [Psr-11](https://
 
 ## Philosophy
 
-The [Psr-11](https://www.php-fig.org/psr/psr-11/) standard normalize the way values are retrieved from a [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) container. It defines an interface named `Psr\Container\ContainerInterface` declaring two methods: `has($id)` returning whether an `$id` entry is defined in the container and `get($id)` returning its value.
+The [Psr-11](https://www.php-fig.org/psr/psr-11/) standard normalize the way values are retrieved from a [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) container. It defines an interface named `Psr\Container\ContainerInterface` declaring two methods: `has($id)` returning whether an `$id` entry is defined in the container and `get($id)` returning it.
 
 From the point of view of something consuming a [Psr-11](https://www.php-fig.org/psr/psr-11/) container, it just looks like a map of values:
 
@@ -31,32 +31,32 @@ $consumer = function (ContainerInterface $container) {
     // Check whether an 'some.service' entry is defined in the container.
     $container->has('some.service');
 
-    // Retrieve the value of the 'some.service' entry.
+    // Retrieve the 'some.service' entry.
     $service = $container->get('some.service');
 
 }
 ```
 
-Defining container entries and the way their values are built depends on the implementation. It usually involves configuration files, service providers, auto wiring algorithms and other complex mechanisms.
+Defining container entries and the way they are built depends on the implementation. It usually involves configuration files, service providers, auto wiring algorithms and other complex mechanisms.
 
-The class `Quanta\Container` is a [Psr-11](https://www.php-fig.org/psr/psr-11/) implementation built around the idea defining the entries and providing their values are two separate concerns. It aims to be the tiniest possible layer around a map of factories:
+The class `Quanta\Container` is a [Psr-11](https://www.php-fig.org/psr/psr-11/) implementation built around the idea defining the entries and providing them are two separate concerns. It aims to be the tiniest possible layer around a map of factories:
 
 ```php
 <?php
 
-// map of factories example.
+// A map of container factories.
 $map = [
-    'id1' => function () { /* ... */ },
-    'id2' => function () { /* ... */ },
+    'id1' => function ($container) { /* ... */ },
+    'id2' => function ($container) { /* ... */ },
 ];
 ```
 
-Factories can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any [type of value](http://php.net/manual/fr/language.types.intro.php). They receive the container as argument allowing them to inject an object dependencies:
+Container factories can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They receive the container as argument so it can be used to inject an object dependencies:
 
 ```php
 <?php
 
-// factory example.
+// A factory producing a SomeService object.
 $factory = function ($container) {
     $dependency = $container->get('dependency');
 
@@ -70,13 +70,13 @@ Developers are free to choose how to build the map of factories while `Quanta\Co
 
 `Quanta\Container` implements [Psr-11](https://www.php-fig.org/psr/psr-11/) `Psr\Container\ContainerInterface`.
 
-The same value is returned every time the `get($id)` method is called with the same identifier. It means the factory associated with the `$id` entry is executed only on the first call and the value it produced is cached to be returned on subsequent calls. This is especially important when the value is an object because the same instance is returned when retrieved multiple times.
+The same value is returned every time the `get($id)` method is called with the same identifier. It means the factory associated with the `$id` entry is executed only on the first call and the produced value is cached to be returned on subsequent calls. This is especially important when the value is an object because the same instance is returned when retrieved multiple times.
 
-Factories can be added and overwritten after initialization but the container is immutable so nothing can change its state when it is consumed.
+Factories can be added and overwritten after initialization but the container is immutable so nothing can change its state while it is consumed.
 
 The `get($id)` methods can throw two different exceptions:
 
-- `Quanta\Container\NotFoundException` when no `$id` entry is definedss
+- `Quanta\Container\NotFoundException` when no `$id` entry is defined
 
 - `Quanta\Container\ContainerException` wrapped around any exception thrown from the factory
 
@@ -164,7 +164,7 @@ use Quanta\Container;
 $container = new Container([
 
     'throwing' => function () {
-        throw new Exception('the original exception');
+        throw new Exception('The original exception');
     },
 
     SomeService::class => function ($container) {
@@ -179,11 +179,11 @@ $container = new Container([
 $container->get('notfound');
 
 // Throws a Quanta\Container\ContainerException. It should display something like:
-// - Exception: the original exception ...
+// - Exception: The original exception ...
 //   ...
-// - Next Quanta\Container\ContainerException: uncaught exception thrown when retrieving the 'throwing' entry from the container ...
+// - Next Quanta\Container\ContainerException: The factory producing the 'throwing' container entry has thrown an uncaught exception ...
 //   ...
-// - Next Quanta\Container\ContainerException: uncaught exception thrown when retrieving the 'SomeService' entry from the container ...
+// - Next Quanta\Container\ContainerException: The factory producing the 'SomeService' container entry has thrown an uncaught exception ...
 //   ...
 try {
     $container->get(SomeService::class);
