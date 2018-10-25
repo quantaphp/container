@@ -142,7 +142,7 @@ $container2 = $container1->with(SomeOtherService1::class, function () {
 });
 
 // Create a new container with many additional entries.
-$container3 = $container2->withFactories([
+$container3 = $container2->withEntries([
     SomeOtherService2::class => function () { /*...*/ },
     SomeOtherService3::class => function () { /*...*/ },
     SomeService::class => function () {

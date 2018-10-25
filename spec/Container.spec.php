@@ -77,7 +77,7 @@ describe('Container', function () {
 
         });
 
-        describe('->withFactories()', function () {
+        describe('->withEntries()', function () {
 
             context('when all the given factories are callables', function () {
 
@@ -86,7 +86,7 @@ describe('Container', function () {
                     $factory1 = stub();
                     $factory3 = stub();
 
-                    $test = $this->container->withFactories([
+                    $test = $this->container->withEntries([
                         'factory1' => $factory1,
                         'factory3' => $factory3,
                     ]);
@@ -109,7 +109,7 @@ describe('Container', function () {
                 it('should throw an InvalidArgumentException', function () {
 
                     $test = function () {
-                        $this->container->withFactories([
+                        $this->container->withEntries([
                             'factory1' => stub(),
                             'factory2' => 'factory',
                         ]);

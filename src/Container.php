@@ -76,7 +76,7 @@ final class Container implements ContainerInterface
      * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
-    public function withFactories(array $factories): Container
+    public function withEntries(array $factories): Container
     {
         try {
             return new Container($factories, $this->map);
