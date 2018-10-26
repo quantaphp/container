@@ -125,59 +125,75 @@ describe('Container', function () {
 
         describe('->get()', function () {
 
-            context('when the given id is associated with a factory', function () {
+            context('when the given id is a string', function () {
 
-                context('when the factory does not throw an exception', function () {
+                context('when the given id is associated with a factory', function () {
 
-                    it('should return the value produced by the factory', function () {
+                    context('when the factory does not throw an exception', function () {
 
-                        $value = new class {};
+                        it('should return the value produced by the factory', function () {
 
-                        $this->factory1->with($this->container)->returns($value);
+                            $value = new class {};
 
-                        $test = $this->container->get('factory1');
+                            $this->factory1->with($this->container)->returns($value);
 
-                        expect($test)->toBe($value);
+                            $test = $this->container->get('factory1');
 
-                    });
+                            expect($test)->toBe($value);
 
-                    it('should return the same value on multiple calls', function () {
-
-                        $this->factory1->with($this->container)->does(function () {
-                            return new class {};
                         });
 
-                        $test1 = $this->container->get('factory1');
-                        $test2 = $this->container->get('factory1');
+                        it('should return the same value on multiple calls', function () {
 
-                        expect($test1)->toBe($test2);
+                            $this->factory1->with($this->container)->does(function () {
+                                return new class {};
+                            });
+
+                            $test1 = $this->container->get('factory1');
+                            $test2 = $this->container->get('factory1');
+
+                            expect($test1)->toBe($test2);
+
+                        });
+
+                        it('should cache null values', function () {
+
+                            $this->factory1->with($this->container)->returns(null);
+
+                            $this->container->get('factory1');
+                            $this->container->get('factory1');
+
+                            $this->factory1->once()->called();
+
+                        });
 
                     });
 
-                    it('should cache null values', function () {
+                    context('when the factory throws an exception', function () {
 
-                        $this->factory1->with($this->container)->returns(null);
+                        it('should throw a ContainerException wrapped around the exception', function () {
 
-                        $this->container->get('factory1');
-                        $this->container->get('factory1');
+                            $exception = mock(Throwable::class)->get();
 
-                        $this->factory1->once()->called();
+                            $this->factory1->with($this->container)->throws($exception);
+
+                            $test = function () { $this->container->get('factory1'); };
+
+                            expect($test)->toThrow(new ContainerException('factory1', $exception));
+
+                        });
 
                     });
 
                 });
 
-                context('when the factory throws an exception', function () {
+                context('when the given id is not associated with a factory', function () {
 
-                    it('should throw a ContainerException wrapped around the exception', function () {
+                    it('should throw a NotFoundException', function () {
 
-                        $exception = mock(Throwable::class)->get();
+                        $test = function () { $this->container->get('notfound'); };
 
-                        $this->factory1->with($this->container)->throws($exception);
-
-                        $test = function () { $this->container->get('factory1'); };
-
-                        expect($test)->toThrow(new ContainerException('factory1', $exception));
+                        expect($test)->toThrow(new NotFoundException('notfound'));
 
                     });
 
@@ -185,13 +201,13 @@ describe('Container', function () {
 
             });
 
-            context('when the given id is not associated with a factory', function () {
+            context('when the given id is not a string', function () {
 
-                it('should throw a NotFoundException', function () {
+                it('should throw an InvalidArgumentException', function () {
 
-                    $test = function () { $this->container->get('notfound'); };
+                    $test = function () { $this->container->get([]); };
 
-                    expect($test)->toThrow(new NotFoundException('notfound'));
+                    expect($test)->toThrow(new InvalidArgumentException);
 
                 });
 
@@ -201,25 +217,41 @@ describe('Container', function () {
 
         describe('->has()', function () {
 
-            context('when the given id is associated with a factory', function () {
+            context('when the given id is a string', function () {
 
-                it('should return true', function () {
+                context('when the given id is associated with a factory', function () {
 
-                    $test = $this->container->has('factory1');
+                    it('should return true', function () {
 
-                    expect($test)->toBeTruthy();
+                        $test = $this->container->has('factory1');
+
+                        expect($test)->toBeTruthy();
+
+                    });
+
+                });
+
+                context('when the given id is not associated with a factory', function () {
+
+                    it('should return false', function () {
+
+                        $test = $this->container->has('notdefined');
+
+                        expect($test)->toBeFalsy();
+
+                    });
 
                 });
 
             });
 
-            context('when the given id is not associated with a factory', function () {
+            context('when the given id is not a string', function () {
 
-                it('should return false', function () {
+                it('should throw an InvalidArgumentException', function () {
 
-                    $test = $this->container->has('notdefined');
+                    $test = function () { $this->container->has([]); };
 
-                    expect($test)->toBeFalsy();
+                    expect($test)->toThrow(new InvalidArgumentException);
 
                 });
 

@@ -93,7 +93,14 @@ final class Container implements ContainerInterface
      */
     public function get($id)
     {
-        // see $this->map
+        // Ensure the id is a string.
+        if (! is_string($id)) {
+            $msg = $this->identifierTypeErrorMessage($id);
+
+            throw new \InvalidArgumentException($msg);
+        }
+
+        // See $this->map
         $ref = &$this->map[$id];
 
         // Fail when the given id is not present in the map.
@@ -120,6 +127,14 @@ final class Container implements ContainerInterface
      */
     public function has($id)
     {
+        // Ensure the id is a string.
+        if (! is_string($id)) {
+            $msg = $this->identifierTypeErrorMessage($id);
+
+            throw new \InvalidArgumentException($msg);
+        }
+
+        // Return whether the given id is in the map.
         return isset($this->map[$id]);
     }
 
@@ -143,6 +158,20 @@ final class Container implements ContainerInterface
     private function notCallable($value): bool
     {
         return ! is_callable($value);
+    }
+
+    /**
+     * Return the error message of the exception thrown when an identifier is
+     * not a string.
+     *
+     * @param mixed $id
+     * @return string
+     */
+    private function identifierTypeErrorMessage($id): string
+    {
+        $tpl = 'Container entry identifier must be of the type string, %s given';
+
+        return sprintf($tpl, new Printable($id));
     }
 
     /**
