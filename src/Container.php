@@ -45,7 +45,7 @@ final class Container implements ContainerInterface
     public function __construct(array $factories, array $previous = [])
     {
         try {
-            $this->map = array_map([$this, 'array'], $factories) + $previous;
+            $this->map = array_map([$this, 'entry'], $factories) + $previous;
         }
         catch (\TypeError $e) {
             throw new \InvalidArgumentException(
@@ -141,12 +141,14 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Return an array containing the given factory.
+     * Return the internal data structure of an entry from the given factory.
+     *
+     * Right now only need to return an array containing the given factory.
      *
      * @param callable $factory
      * @return array
      */
-    private function array(callable $factory): array
+    private function entry(callable $factory): array
     {
         return [$factory];
     }
