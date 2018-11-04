@@ -51,7 +51,7 @@ $map = [
 ];
 ```
 
-Container factories can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They receive the container as argument so it can be used to inject an object dependencies:
+Container factories can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They are called with the container as first argument so it can be used to retrieve the entry's dependencies:
 
 ```php
 <?php
@@ -91,7 +91,6 @@ use Quanta\Container;
 
 // Initialize the container with many entries.
 $container = new Container([
-
     'some.config' => function () {
         return 'config value';
     },
@@ -107,7 +106,6 @@ $container = new Container([
 
         return new SomeService($dependency);
     },
-
 ]);
 
 // Quanta\Container is a Psr-11 implementation.
@@ -133,7 +131,7 @@ use Quanta\Container;
 $container1 = new Container([
     SomeService::class => function () {
         // ...
-    };
+    },
 ]);
 
 // Create a new container with an additional entry.
@@ -162,7 +160,6 @@ use Quanta\Container;
 
 // Initialize a container with failling entries.
 $container = new Container([
-
     'throwing' => function () {
         throw new Exception('The original exception');
     },
@@ -172,7 +169,6 @@ $container = new Container([
 
         return new SomeService($dependency);
     },
-
 ]);
 
 // Throws a Quanta\Container\NotFoundException.
