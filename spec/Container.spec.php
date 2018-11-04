@@ -8,7 +8,8 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Container\FactoryTypeException;
+use Quanta\Container\FactoryTypeErrorMessage;
+use Quanta\Container\IdentifierTypeErrorMessage;
 
 describe('Container', function () {
 
@@ -38,7 +39,7 @@ describe('Container', function () {
 
                 it('should return a new Container with an additional factory', function () {
 
-                    $factory3 = stub();
+                    $factory3 = function () {};
 
                     $test = $this->container->with('factory3', $factory3);
 
@@ -59,7 +60,7 @@ describe('Container', function () {
 
                 it('should return a new Container with the given id associated with the given factory', function () {
 
-                    $factory1 = stub();
+                    $factory1 = function () {};
 
                     $test = $this->container->with('factory1', $factory1);
 
@@ -83,8 +84,8 @@ describe('Container', function () {
 
                 it('should return a new Container with additional factories', function () {
 
-                    $factory1 = stub();
-                    $factory3 = stub();
+                    $factory1 = function () {};
+                    $factory3 = function () {};
 
                     $test = $this->container->withEntries([
                         'factory1' => $factory1,
@@ -108,14 +109,19 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
-                    $test = function () {
-                        $this->container->withEntries([
-                            'factory1' => stub(),
-                            'factory2' => 'factory',
-                        ]);
+                    $factories = [
+                        'factory1' => function () {},
+                        'factory2' => 'factory',
+                        'factory3' => function () {},
+                    ];
+
+                    $test = function () use ($factories) {
+                        $this->container->withEntries($factories);
                     };
 
-                    expect($test)->toThrow(new InvalidArgumentException);
+                    expect($test)->toThrow(new InvalidArgumentException(
+                        (string) new FactoryTypeErrorMessage($factories)
+                    ));
 
                 });
 
@@ -207,7 +213,9 @@ describe('Container', function () {
 
                     $test = function () { $this->container->get([]); };
 
-                    expect($test)->toThrow(new InvalidArgumentException);
+                    expect($test)->toThrow(new InvalidArgumentException(
+                        (string) new IdentifierTypeErrorMessage([])
+                    ));
 
                 });
 
@@ -251,7 +259,9 @@ describe('Container', function () {
 
                     $test = function () { $this->container->has([]); };
 
-                    expect($test)->toThrow(new InvalidArgumentException);
+                    expect($test)->toThrow(new InvalidArgumentException(
+                        (string) new IdentifierTypeErrorMessage([])
+                    ));
 
                 });
 
@@ -265,14 +275,19 @@ describe('Container', function () {
 
         it('should throw an InvalidArgumentException', function () {
 
-            $test = function () {
-                new Container([
-                    'factory1' => stub(),
-                    'factory2' => 'factory',
-                ]);
+            $factories = [
+                'factory1' => function () {},
+                'factory2' => 'factory',
+                'factory3' => function () {},
+            ];
+
+            $test = function () use ($factories) {
+                new Container($factories);
             };
 
-            expect($test)->toThrow(new InvalidArgumentException);
+            expect($test)->toThrow(new InvalidArgumentException(
+                (string) new FactoryTypeErrorMessage($factories)
+            ));
 
         });
 

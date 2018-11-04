@@ -6,6 +6,8 @@ use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
+use Quanta\Container\FactoryTypeErrorMessage;
+use Quanta\Container\IdentifierTypeErrorMessage;
 
 final class Container implements ContainerInterface
 {
@@ -46,9 +48,9 @@ final class Container implements ContainerInterface
             $this->map = array_map([$this, 'array'], $factories) + $previous;
         }
         catch (\TypeError $e) {
-            $msg = $this->factoryTypeErrorMessage($factories);
-
-            throw new \InvalidArgumentException($msg);
+            throw new \InvalidArgumentException(
+                (string) new FactoryTypeErrorMessage($factories)
+            );
         }
     }
 
@@ -82,9 +84,9 @@ final class Container implements ContainerInterface
             return new Container($factories, $this->map);
         }
         catch (\InvalidArgumentException $e) {
-            $msg = $this->factoryTypeErrorMessage($factories);
-
-            throw new \InvalidArgumentException($msg);
+            throw new \InvalidArgumentException(
+                (string) new FactoryTypeErrorMessage($factories)
+            );
         }
     }
 
@@ -95,9 +97,9 @@ final class Container implements ContainerInterface
     {
         // Ensure the id is a string.
         if (! is_string($id)) {
-            $msg = $this->identifierTypeErrorMessage($id);
-
-            throw new \InvalidArgumentException($msg);
+            throw new \InvalidArgumentException(
+                (string) new IdentifierTypeErrorMessage($id)
+            );
         }
 
         // See $this->map
@@ -129,9 +131,9 @@ final class Container implements ContainerInterface
     {
         // Ensure the id is a string.
         if (! is_string($id)) {
-            $msg = $this->identifierTypeErrorMessage($id);
-
-            throw new \InvalidArgumentException($msg);
+            throw new \InvalidArgumentException(
+                (string) new IdentifierTypeErrorMessage($id)
+            );
         }
 
         // Return whether the given id is in the map.
@@ -147,49 +149,5 @@ final class Container implements ContainerInterface
     private function array(callable $factory): array
     {
         return [$factory];
-    }
-
-    /**
-     * Return whether the given value is not a callable.
-     *
-     * @param mixed $value
-     * @return bool
-     */
-    private function notCallable($value): bool
-    {
-        return ! is_callable($value);
-    }
-
-    /**
-     * Return the error message of the exception thrown when an identifier is
-     * not a string.
-     *
-     * @param mixed $id
-     * @return string
-     */
-    private function identifierTypeErrorMessage($id): string
-    {
-        $tpl = 'Container entry identifier must be of the type string, %s given';
-
-        return sprintf($tpl, new Printable($id));
-    }
-
-    /**
-     * Return the error message of the exception thrown when a factory is not
-     * a callable.
-     *
-     * @param array $factories
-     * @return string
-     */
-    private function factoryTypeErrorMessage(array $factories): string
-    {
-        $invalid = array_filter($factories, [$this, 'notCallable']);
-
-        $id = key($invalid);
-        $value = current($invalid);
-
-        $tpl = 'The \'%s\' container entry is associated to %s, callable expected';
-
-        return sprintf($tpl, $id, new Printable($value));
     }
 }
