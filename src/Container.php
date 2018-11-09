@@ -6,8 +6,8 @@ use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Container\FactoryTypeErrorMessage;
-use Quanta\Container\IdentifierTypeErrorMessage;
+use Quanta\Exceptions\ArgumentTypeErrorMessage;
+use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 final class Container implements ContainerInterface
 {
@@ -49,7 +49,7 @@ final class Container implements ContainerInterface
         }
         catch (\TypeError $e) {
             throw new \InvalidArgumentException(
-                (string) new FactoryTypeErrorMessage($factories)
+                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
         }
     }
@@ -85,7 +85,7 @@ final class Container implements ContainerInterface
         }
         catch (\InvalidArgumentException $e) {
             throw new \InvalidArgumentException(
-                (string) new FactoryTypeErrorMessage($factories)
+                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
         }
     }
@@ -98,7 +98,7 @@ final class Container implements ContainerInterface
         // Ensure the id is a string.
         if (! is_string($id)) {
             throw new \InvalidArgumentException(
-                (string) new IdentifierTypeErrorMessage($id)
+                (string) new ArgumentTypeErrorMessage(1, 'string', $id)
             );
         }
 
@@ -132,7 +132,7 @@ final class Container implements ContainerInterface
         // Ensure the id is a string.
         if (! is_string($id)) {
             throw new \InvalidArgumentException(
-                (string) new IdentifierTypeErrorMessage($id)
+                (string) new ArgumentTypeErrorMessage(1, 'string', $id)
             );
         }
 

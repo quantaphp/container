@@ -22,7 +22,7 @@
     "require": {
         "php": ">=7.0",
         "psr/container": "^1.0",
-        "quanta/printable": "^0.4"
+        "quanta/exceptions": "^0.1.0"
     },
     "require-dev": {
         "kahlan/kahlan": "^4.0",

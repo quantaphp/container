@@ -8,8 +8,8 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Container\FactoryTypeErrorMessage;
-use Quanta\Container\IdentifierTypeErrorMessage;
+use Quanta\Exceptions\ArgumentTypeErrorMessage;
+use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 describe('Container', function () {
 
@@ -109,6 +109,8 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
+                    ArrayArgumentTypeErrorMessage::testing();
+
                     $factories = [
                         'factory1' => function () {},
                         'factory2' => 'factory',
@@ -119,9 +121,11 @@ describe('Container', function () {
                         $this->container->withEntries($factories);
                     };
 
-                    expect($test)->toThrow(new InvalidArgumentException(
-                        (string) new FactoryTypeErrorMessage($factories)
-                    ));
+                    $expected = new InvalidArgumentException(
+                        (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
+                    );
+
+                    expect($test)->toThrow($expected);
 
                 });
 
@@ -211,11 +215,15 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
+                    ArgumentTypeErrorMessage::testing();
+
                     $test = function () { $this->container->get([]); };
 
-                    expect($test)->toThrow(new InvalidArgumentException(
-                        (string) new IdentifierTypeErrorMessage([])
-                    ));
+                    $expected = new InvalidArgumentException(
+                        (string) new ArgumentTypeErrorMessage(1, 'string', [])
+                    );
+
+                    expect($test)->toThrow($expected);
 
                 });
 
@@ -257,11 +265,15 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
+                    ArgumentTypeErrorMessage::testing();
+
                     $test = function () { $this->container->has([]); };
 
-                    expect($test)->toThrow(new InvalidArgumentException(
-                        (string) new IdentifierTypeErrorMessage([])
-                    ));
+                    $expected = new InvalidArgumentException(
+                        (string) new ArgumentTypeErrorMessage(1, 'string', [])
+                    );
+
+                    expect($test)->toThrow($expected);
 
                 });
 
@@ -275,6 +287,8 @@ describe('Container', function () {
 
         it('should throw an InvalidArgumentException', function () {
 
+            ArrayArgumentTypeErrorMessage::testing();
+
             $factories = [
                 'factory1' => function () {},
                 'factory2' => 'factory',
@@ -285,9 +299,11 @@ describe('Container', function () {
                 new Container($factories);
             };
 
-            expect($test)->toThrow(new InvalidArgumentException(
-                (string) new FactoryTypeErrorMessage($factories)
-            ));
+            $expected = new InvalidArgumentException(
+                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
+            );
+
+            expect($test)->toThrow($expected);
 
         });
 
