@@ -4,13 +4,18 @@ namespace Quanta;
 
 use Psr\Container\ContainerInterface;
 
-use Quanta\Container\NotFoundException;
-use Quanta\Container\ContainerException;
+use Quanta\Callbacks\Wrap;
+use Quanta\Exceptions\ArrayTypeCheckTrait;
 use Quanta\Exceptions\ArgumentTypeErrorMessage;
 use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
+use Quanta\Container\NotFoundException;
+use Quanta\Container\ContainerException;
+
 final class Container implements ContainerInterface
 {
+    use ArrayTypeCheckTrait;
+
     /**
      * The map used by the container to retrieve entry values from their ids.
      *
@@ -44,14 +49,13 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories, array $previous = [])
     {
-        try {
-            $this->map = array_map([$this, 'entry'], $factories) + $previous;
-        }
-        catch (\TypeError $e) {
+        if (! $this->areAllTypedAs($factories, 'callable')) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
         }
+
+        $this->map = array_map(new Wrap, $factories) + $previous;
     }
 
     /**
@@ -69,25 +73,19 @@ final class Container implements ContainerInterface
     /**
      * Return a new container with many additional entries.
      *
-     * The eventual InvalidArgumentException thrown from the constructor is
-     * rethrown from here. The reasoning behind this is: if the associative
-     * array values could be type hinted as callable, the exception would be
-     * thrown from this method, not from the constructor.
-     *
      * @param callable[] $factories
      * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
     public function withEntries(array $factories): Container
     {
-        try {
-            return new Container($factories, $this->map);
-        }
-        catch (\InvalidArgumentException $e) {
+        if (! $this->areAllTypedAs($factories, 'callable')) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
         }
+
+        return new Container($factories, $this->map);
     }
 
     /**
@@ -138,18 +136,5 @@ final class Container implements ContainerInterface
 
         // Return whether the given id is in the map.
         return isset($this->map[$id]);
-    }
-
-    /**
-     * Return the internal data structure of an entry from the given factory.
-     *
-     * Right now only need to return an array containing the given factory.
-     *
-     * @param callable $factory
-     * @return array
-     */
-    private function entry(callable $factory): array
-    {
-        return [$factory];
     }
 }
