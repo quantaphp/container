@@ -5,12 +5,11 @@ namespace Quanta;
 use Psr\Container\ContainerInterface;
 
 use Quanta\Callbacks\Wrap;
+use Quanta\Container\NotFoundException;
+use Quanta\Container\ContainerException;
 use Quanta\Exceptions\ArrayTypeCheckTrait;
 use Quanta\Exceptions\ArgumentTypeErrorMessage;
 use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
-
-use Quanta\Container\NotFoundException;
-use Quanta\Container\ContainerException;
 
 final class Container implements ContainerInterface
 {
