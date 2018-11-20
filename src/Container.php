@@ -4,7 +4,7 @@ namespace Quanta;
 
 use Psr\Container\ContainerInterface;
 
-use Quanta\Callbacks\Wrap;
+use Quanta\Callbacks\Nest;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
 use Quanta\Exceptions\ArrayTypeCheckTrait;
@@ -54,7 +54,7 @@ final class Container implements ContainerInterface
             );
         }
 
-        $this->map = array_map(new Wrap, $factories) + $previous;
+        $this->map = array_map(new Nest, $factories) + $previous;
     }
 
     /**
