@@ -48,7 +48,7 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories, array $previous = [])
     {
-        if (! $this->areAllTypedAs($factories, 'callable')) {
+        if (! $this->areAllTypedAs('callable', $factories)) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
@@ -78,7 +78,7 @@ final class Container implements ContainerInterface
      */
     public function withEntries(array $factories): Container
     {
-        if (! $this->areAllTypedAs($factories, 'callable')) {
+        if (! $this->areAllTypedAs('callable', $factories)) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
