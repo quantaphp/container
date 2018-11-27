@@ -22,7 +22,6 @@
     "require": {
         "php": ">=7.0",
         "psr/container": "^1.0",
-        "quanta/callbacks": "^0.3.0",
         "quanta/exceptions": "^0.3.0"
     },
     "require-dev": {

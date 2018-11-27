@@ -4,7 +4,6 @@ namespace Quanta;
 
 use Psr\Container\ContainerInterface;
 
-use Quanta\Callbacks\Nest;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
 use Quanta\Exceptions\ArrayTypeCheckTrait;
@@ -54,7 +53,7 @@ final class Container implements ContainerInterface
             );
         }
 
-        $this->map = array_map(new Nest, $factories) + $previous;
+        $this->map = array_map([$this, 'nested'], $factories) + $previous;
     }
 
     /**
@@ -135,5 +134,16 @@ final class Container implements ContainerInterface
 
         // Return whether the given id is in the map.
         return isset($this->map[$id]);
+    }
+
+    /**
+     * Return an array containing the given factory.
+     *
+     * @param callable $factory
+     * @return array
+     */
+    public function nested(callable $factory): array
+    {
+        return [$factory];
     }
 }
