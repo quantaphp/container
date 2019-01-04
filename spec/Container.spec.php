@@ -8,7 +8,6 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Exceptions\ArgumentTypeErrorMessage;
 use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 describe('Container', function () {
@@ -215,15 +214,9 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
-                    ArgumentTypeErrorMessage::testing();
-
                     $test = function () { $this->container->get([]); };
 
-                    $expected = new InvalidArgumentException(
-                        (string) new ArgumentTypeErrorMessage(1, 'string', [])
-                    );
-
-                    expect($test)->toThrow($expected);
+                    expect($test)->toThrow(new InvalidArgumentException);
 
                 });
 
@@ -265,15 +258,9 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
-                    ArgumentTypeErrorMessage::testing();
-
                     $test = function () { $this->container->has([]); };
 
-                    $expected = new InvalidArgumentException(
-                        (string) new ArgumentTypeErrorMessage(1, 'string', [])
-                    );
-
-                    expect($test)->toThrow($expected);
+                    expect($test)->toThrow(new InvalidArgumentException);
 
                 });
 

@@ -6,25 +6,24 @@ use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Exceptions\ArrayTypeCheckTrait;
-use Quanta\Exceptions\ArgumentTypeErrorMessage;
+
+use function Quanta\Exceptions\areAllTypedAs;
 use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 final class Container implements ContainerInterface
 {
-    use ArrayTypeCheckTrait;
-
     /**
-     * The map used by the container to retrieve entry values from their ids.
+     * The map used by the container to retrieve entries from their ids.
      *
      * Ids are actually mapped to arrays containing one or two elements:
-     * - the first one is the factory producing the entry value
-     * - the second one is the value produced by the factory
+     * - the first one is the factory producing the entry
+     * - the second one is the cached result of the factory
      *
      * The second value is set when `get($id)` is called for the first time and
-     * is then used as a cache on subsequent calls. This way the container only
-     * needs to perform one lookup in this map when retrieving the value of an
-     * entry.
+     * is used as a cache on subsequent calls.
+     *
+     * This data structure allows the container to perform only one lookup when
+     * retrieving an entry.
      *
      * @var array[]
      */
@@ -47,7 +46,7 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories, array $previous = [])
     {
-        if (! $this->areAllTypedAs('callable', $factories)) {
+        if (! areAllTypedAs('callable', $factories)) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
@@ -77,13 +76,15 @@ final class Container implements ContainerInterface
      */
     public function withEntries(array $factories): Container
     {
-        if (! $this->areAllTypedAs('callable', $factories)) {
+        try {
+            return new Container($factories, $this->map);
+        }
+
+        catch (\InvalidArgumentException $e) {
             throw new \InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
             );
         }
-
-        return new Container($factories, $this->map);
     }
 
     /**
@@ -94,7 +95,7 @@ final class Container implements ContainerInterface
         // Ensure the id is a string.
         if (! is_string($id)) {
             throw new \InvalidArgumentException(
-                (string) new ArgumentTypeErrorMessage(1, 'string', $id)
+                $this->invalidIdentifierTypeErrorMessage('get', $id)
             );
         }
 
@@ -104,7 +105,7 @@ final class Container implements ContainerInterface
         // Fail when the given id is not present in the map.
         if ($ref === null) throw new NotFoundException($id);
 
-        // Return the entry value when already built.
+        // Return the entry when cached.
         if (count($ref) == 2) return $ref[1];
 
         // Execute the factory and store the value it produced in $ref[1].
@@ -128,7 +129,7 @@ final class Container implements ContainerInterface
         // Ensure the id is a string.
         if (! is_string($id)) {
             throw new \InvalidArgumentException(
-                (string) new ArgumentTypeErrorMessage(1, 'string', $id)
+                $this->invalidIdentifierTypeErrorMessage('has', $id)
             );
         }
 
@@ -142,8 +143,23 @@ final class Container implements ContainerInterface
      * @param callable $factory
      * @return array
      */
-    public function nested(callable $factory): array
+    private function nested(callable $factory): array
     {
         return [$factory];
+    }
+
+    /**
+     * Return the message of the exception thrown when an identifier is not a
+     * string.
+     *
+     * @param string    $method
+     * @param mixed     $id
+     * @return string
+     */
+    private function invalidIdentifierTypeErrorMessage(string $method, $id): string
+    {
+        $tpl = 'Argument 1 passed to %s::%s method must be of the type string, %s given';
+
+        return sprintf($tpl, Container::class, $method, gettype($id));
     }
 }
