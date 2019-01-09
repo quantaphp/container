@@ -12,16 +12,13 @@ use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 describe('Container', function () {
 
-    context('when all the given factories are callables', function () {
+    context('when all the values of the array of factories are callables', function () {
 
         beforeEach(function () {
 
-            $this->factory1 = stub();
-            $this->factory2 = stub();
-
             $this->container = new Container([
-                'factory1' => $this->factory1,
-                'factory2' => $this->factory2,
+                'factory1' => $this->factory1 = stub(),
+                'factory2' => $this->factory2 = stub(),
             ]);
 
         });
@@ -42,14 +39,12 @@ describe('Container', function () {
 
                     $test = $this->container->with('factory3', $factory3);
 
-                    $container = new Container([
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual(new Container([
                         'factory1' => $this->factory1,
                         'factory2' => $this->factory2,
                         'factory3' => $factory3,
-                    ]);
-
-                    expect($test)->not->toBe($this->container);
-                    expect($test)->toEqual($container);
+                    ]));
 
                 });
 
@@ -63,13 +58,11 @@ describe('Container', function () {
 
                     $test = $this->container->with('factory1', $factory1);
 
-                    $container = new Container([
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual(new Container([
                         'factory1' => $factory1,
                         'factory2' => $this->factory2,
-                    ]);
-
-                    expect($test)->not->toBe($this->container);
-                    expect($test)->toEqual($container);
+                    ]));
 
                 });
 
@@ -91,14 +84,12 @@ describe('Container', function () {
                         'factory3' => $factory3,
                     ]);
 
-                    $container = new Container([
+                    expect($test)->not->toBe($this->container);
+                    expect($test)->toEqual(new Container([
                         'factory1' => $factory1,
                         'factory2' => $this->factory2,
                         'factory3' => $factory3,
-                    ]);
-
-                    expect($test)->not->toBe($this->container);
-                    expect($test)->toEqual($container);
+                    ]));
 
                 });
 
@@ -120,11 +111,9 @@ describe('Container', function () {
                         $this->container->withEntries($factories);
                     };
 
-                    $expected = new InvalidArgumentException(
+                    expect($test)->toThrow(new InvalidArgumentException(
                         (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
-                    );
-
-                    expect($test)->toThrow($expected);
+                    ));
 
                 });
 
@@ -270,7 +259,7 @@ describe('Container', function () {
 
     });
 
-    context('when at least one given factory is not a callable', function () {
+    context('when a value of the array of factories is not a callable', function () {
 
         it('should throw an InvalidArgumentException', function () {
 
@@ -286,11 +275,9 @@ describe('Container', function () {
                 new Container($factories);
             };
 
-            $expected = new InvalidArgumentException(
+            expect($test)->toThrow(new InvalidArgumentException(
                 (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
-            );
-
-            expect($test)->toThrow($expected);
+            ));
 
         });
 

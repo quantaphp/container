@@ -99,23 +99,31 @@ final class Container implements ContainerInterface
             );
         }
 
-        // See $this->map
+        /**
+         * Get a reference to the array associated to this id in the map.
+         *
+         * Docblock for phpstan.
+         *
+         * @var array|null
+         */
         $ref = &$this->map[$id];
 
-        // Fail when the given id is not present in the map.
-        if ($ref === null) throw new NotFoundException($id);
+        // Fail when the given id is not present in the map (= null ref).
+        if (is_null($ref)) throw new NotFoundException($id);
 
-        // Return the entry when cached.
+        // Return the entry when cached (= the array has two values).
         if (count($ref) == 2) return $ref[1];
 
-        // Execute the factory and store the value it produced in $ref[1].
-        // Any uncaught exception is wrapped in a ContainerException because it
-        // allows to keep track of all the entries failing because of this
-        // original exception. This should not be a problem because recovering
-        // from a failling factory should not be a reasonable thing to do.
+        // Execute the factory and cache its result.
         try {
             return $ref[1] = ($ref[0])($this);
         }
+
+        // Any uncaught exception is wrapped in a ContainerException because it
+        // allows to keep track of all the entries failing because of this
+        // original exception.
+        // This is not possible anymore to recover from a specific exception
+        // thrown from a factory but it does not make sense anyway (usecase ?)
         catch (\Throwable $e) {
             throw new ContainerException($id, $e);
         }
@@ -135,6 +143,17 @@ final class Container implements ContainerInterface
 
         // Return whether the given id is in the map.
         return isset($this->map[$id]);
+    }
+
+    /**
+     * Return a reference to the array associated to the given id.
+     *
+     * @param string $id
+     * @return array|null
+     */
+    private function &ref(string $id)
+    {
+        return $this->map[$id];
     }
 
     /**
