@@ -8,10 +8,10 @@
         "dependency-injection"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/quanta/container",
+    "homepage": "https://github.com/quantaphp/container",
     "support": {
-        "issues": "https://github.com/quanta/container/issues",
-        "source": "https://github.com/quanta/container"
+        "issues": "https://github.com/quantaphp/container/issues",
+        "source": "https://github.com/quantaphp/container"
     },
     "authors": [
         {
