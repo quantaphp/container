@@ -7,9 +7,6 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
 
-use Quanta\ArrayTypeCheck;
-use Quanta\ArrayTypeCheck\InvalidArrayMessage;
-
 final class Container implements ContainerInterface
 {
     /**
@@ -40,11 +37,11 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories)
     {
-        $result = ArrayTypeCheck::result($factories, 'callable');
+        $result = \Quanta\ArrayTypeCheck::result($factories, 'callable');
 
         if (! $result->isValid()) {
             throw new \InvalidArgumentException(
-                InvalidArrayMessage::constructor($this, 1, $result)
+                $result->message()->constructor($this, 1)
             );
         }
 
