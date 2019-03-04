@@ -13,14 +13,13 @@ use Quanta\ArrayTypeCheck\InvalidArrayMessage;
 final class Container implements ContainerInterface
 {
     /**
-     * The map used by the container to retrieve entries from their ids.
+     * The id to entry map.
      *
-     * Ids are actually mapped to arrays containing one or two elements:
-     * - the first one is the factory producing the entry
-     * - the second one is the cached result of the factory
+     * An entry is an array with the factory as first element and the cached
+     * value produced by the factory as second element.
      *
-     * The second value is set when `get($id)` is called for the first time and
-     * is used as a cache on subsequent calls.
+     * The second value is populated when the factory is invoked on the first
+     * `get($id)` method call.
      *
      * This data structure allows the container to perform only one lookup when
      * retrieving an entry.
@@ -32,19 +31,14 @@ final class Container implements ContainerInterface
     /**
      * Constructor.
      *
-     * The map is build by putting the given factories inside arrays and merging
-     * it with the given previous map.
+     * The map is build by creating entries from the factories.
      *
-     * The new factories overwrite the previous ones having the same ids.
+     * @see $this->map
      *
-     * An InvalidArgumentException with an useful error message is thrown when
-     * a factory is not a callable.
-     *
-     * @param callable[]    $factories
-     * @param array[]       $previous
+     * @param callable[] $factories
      * @throws \InvalidArgumentException
      */
-    public function __construct(array $factories, array $previous = [])
+    public function __construct(array $factories)
     {
         $result = ArrayTypeCheck::result($factories, 'callable');
 
@@ -54,37 +48,7 @@ final class Container implements ContainerInterface
             );
         }
 
-        $this->map = array_map([$this, 'nested'], $factories) + $previous;
-    }
-
-    /**
-     * Return a new container with an additional entry.
-     *
-     * @param string    $id
-     * @param callable  $factory
-     * @return \Quanta\Container
-     */
-    public function with(string $id, callable $factory): Container
-    {
-        return new Container([$id => $factory], $this->map);
-    }
-
-    /**
-     * Return a new container with many additional entries.
-     *
-     * @param callable[] $factories
-     * @return \Quanta\Container
-     * @throws \InvalidArgumentException
-     */
-    public function withEntries(array $factories): Container
-    {
-        try {
-            return new Container($factories, $this->map);
-        }
-
-        catch (\InvalidArgumentException $e) {
-            throw new \InvalidArgumentException;
-        }
+        $this->map = array_map([$this, 'entry'], $factories);
     }
 
     /**
@@ -146,23 +110,14 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Return a reference to the array associated to the given id.
+     * Return an entry from the given factory.
      *
-     * @param string $id
-     * @return array|null
-     */
-    private function &ref(string $id)
-    {
-        return $this->map[$id];
-    }
-
-    /**
-     * Return an array containing the given factory.
+     * @see $this->map
      *
      * @param callable $factory
      * @return array
      */
-    private function nested(callable $factory): array
+    private function entry(callable $factory): array
     {
         return [$factory];
     }

@@ -34,24 +34,26 @@ $consumer = function (ContainerInterface $container) {
     // Retrieve the 'some.service' entry.
     $service = $container->get('some.service');
 
+    // ...
+
 }
 ```
 
 Defining container entries and the way they are built depends on the implementation. It usually involves configuration files, service providers, auto wiring algorithms and other complex mechanisms.
 
-The class `Quanta\Container` is a [Psr-11](https://www.php-fig.org/psr/psr-11/) implementation built around the idea defining the entries and providing them are two separate concerns. It aims to be the tiniest possible layer around a map of factories:
+The class `Quanta\Container` is a [Psr-11](https://www.php-fig.org/psr/psr-11/) implementation built around the idea defining the entries and providing them are two separate concerns. It aims to be the tiniest possible layer around an associative array of factories:
 
 ```php
 <?php
 
-// A map of container factories.
-$map = [
+// An associative array of factories.
+$factories = [
     'id1' => function ($container) { /* ... */ },
     'id2' => function ($container) { /* ... */ },
 ];
 ```
 
-Container factories can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They are called with the container as first argument so it can be used to retrieve the entry's dependencies:
+Factories used by `Quanta\Container` can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They are called with the container as first argument so it can be used to retrieve the entry's dependencies:
 
 ```php
 <?php
@@ -64,15 +66,15 @@ $factory = function ($container) {
 };
 ```
 
-Developers are free to choose how to build the map of factories while `Quanta\Container` focuses on being as efficient as possible to retrieve the values they produce.
+Developers are free to choose how to build the associative array of factories while `Quanta\Container` focuses on being as efficient as possible to retrieve the values they produce.
 
 ## Design
 
 `Quanta\Container` implements [Psr-11](https://www.php-fig.org/psr/psr-11/) `Psr\Container\ContainerInterface`.
 
-The same value is returned every time the `get($id)` method is called with the same identifier. It means the factory associated with the `$id` entry is executed only on the first call and the produced value is cached to be returned on subsequent calls. This is especially important when the value is an object because the same instance is returned when retrieved multiple times.
+The only way to define factories for `Quanta\Container` is passing them through its constructor. This is a design choice: once the container is built we want to be sure no piece of code can alter its state.
 
-Factories can be added and overwritten after initialization but the container is immutable so nothing can change its state while it is consumed.
+The same value is returned every time the `get($id)` method is called with the same identifier. It means the factory associated with the `$id` entry is executed only on the first call and the produced value is cached to be returned on subsequent calls. This is especially important when the value is an object because the same instance is returned when retrieved multiple times.
 
 The `get($id)` methods can throw two different exceptions:
 
@@ -89,7 +91,7 @@ The second one allow to keep track of all the container entries failling because
 
 use Quanta\Container;
 
-// Initialize the container with many entries.
+// Initialize the container with an associative array of factories.
 $container = new Container([
     'some.config' => function () {
         return 'config value';
@@ -120,37 +122,6 @@ $service1 = $container->get(SomeService::class); // returns the defined instance
 $service2 = $container->get(SomeService::class); // returns the same instance of SomeService.
 
 $service1 === $service2 // returns true.
-```
-
-```php
-<?php
-
-use Quanta\Container;
-
-// Initialize the original container.
-$container1 = new Container([
-    SomeService::class => function () {
-        // ...
-    },
-]);
-
-// Create a new container with an additional entry.
-$container2 = $container1->with(SomeOtherService1::class, function () {
-    // ...
-});
-
-// Create a new container with many additional entries.
-$container3 = $container2->withEntries([
-    SomeOtherService2::class => function () { /*...*/ },
-    SomeOtherService3::class => function () { /*...*/ },
-    SomeService::class => function () {
-        // $container3 uses this factory instead of the one defined in $container1.
-    },
-]);
-
-// Quanta\Container is immutable.
-$container1 === $container2 // returns false.
-$container2 === $container3 // returns false.
 ```
 
 ```php
