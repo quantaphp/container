@@ -8,7 +8,6 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
 
 describe('Container', function () {
 
@@ -99,21 +98,15 @@ describe('Container', function () {
 
                 it('should throw an InvalidArgumentException', function () {
 
-                    ArrayArgumentTypeErrorMessage::testing();
-
-                    $factories = [
-                        'factory1' => function () {},
-                        'factory2' => 'factory',
-                        'factory3' => function () {},
-                    ];
-
-                    $test = function () use ($factories) {
-                        $this->container->withEntries($factories);
+                    $test = function () {
+                        $this->container->withEntries([
+                            'factory1' => function () {},
+                            'factory2' => 'factory',
+                            'factory3' => function () {},
+                        ]);
                     };
 
-                    expect($test)->toThrow(new InvalidArgumentException(
-                        (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
-                    ));
+                    expect($test)->toThrow(new InvalidArgumentException);
 
                 });
 
@@ -263,21 +256,15 @@ describe('Container', function () {
 
         it('should throw an InvalidArgumentException', function () {
 
-            ArrayArgumentTypeErrorMessage::testing();
-
-            $factories = [
-                'factory1' => function () {},
-                'factory2' => 'factory',
-                'factory3' => function () {},
-            ];
-
-            $test = function () use ($factories) {
-                new Container($factories);
+            $test = function () {
+                new Container([
+                    'factory1' => function () {},
+                    'factory2' => 'factory',
+                    'factory3' => function () {},
+                ]);
             };
 
-            expect($test)->toThrow(new InvalidArgumentException(
-                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
-            ));
+            expect($test)->toThrow(new InvalidArgumentException);
 
         });
 

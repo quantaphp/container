@@ -7,8 +7,8 @@ use Psr\Container\ContainerInterface;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
 
-use function Quanta\Exceptions\areAllTypedAs;
-use Quanta\Exceptions\ArrayArgumentTypeErrorMessage;
+use Quanta\ArrayTypeCheck;
+use Quanta\ArrayTypeCheck\InvalidArrayMessage;
 
 final class Container implements ContainerInterface
 {
@@ -46,9 +46,11 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories, array $previous = [])
     {
-        if (! areAllTypedAs('callable', $factories)) {
+        $result = ArrayTypeCheck::result($factories, 'callable');
+
+        if (! $result->isValid()) {
             throw new \InvalidArgumentException(
-                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
+                InvalidArrayMessage::constructor($this, 1, $result)
             );
         }
 
@@ -81,9 +83,7 @@ final class Container implements ContainerInterface
         }
 
         catch (\InvalidArgumentException $e) {
-            throw new \InvalidArgumentException(
-                (string) new ArrayArgumentTypeErrorMessage(1, 'callable', $factories)
-            );
+            throw new \InvalidArgumentException;
         }
     }
 
