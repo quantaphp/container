@@ -28,7 +28,7 @@ final class Container implements ContainerInterface
     /**
      * Constructor.
      *
-     * The map is build by creating entries from the factories.
+     * The map is built by creating entries from the factories.
      *
      * @see $this->map
      *
@@ -37,11 +37,11 @@ final class Container implements ContainerInterface
      */
     public function __construct(array $factories)
     {
-        $result = \Quanta\ArrayTypeCheck::result($factories, 'callable');
+        $result = \Quanta\ArrayTypeCheck::type('callable')->on($factories);
 
         if (! $result->isValid()) {
             throw new \InvalidArgumentException(
-                $result->message()->constructor($this, 1)
+                $result->constructor($this, 1)
             );
         }
 
