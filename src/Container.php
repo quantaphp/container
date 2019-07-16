@@ -39,7 +39,7 @@ final class Container implements ContainerInterface
     {
         $result = \Quanta\ArrayTypeCheck::type('callable')->on($factories);
 
-        if (! $result->isValid()) {
+        if ($result->isFailure()) {
             throw new \InvalidArgumentException(
                 $result->constructor($this, 1)
             );
