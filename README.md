@@ -3,8 +3,6 @@
 This package provides a minimalist dependency injection container implementing [Psr-11](https://www.php-fig.org/psr/psr-11/).
 
 - [Getting started](#getting-started)
-- [Philosophy](#philosophy)
-- [Design](#design)
 - [Usage](#usage)
 
 ## Getting started
@@ -15,147 +13,56 @@ This package provides a minimalist dependency injection container implementing [
 
 **Run tests** `./vendor/bin/kahlan`
 
-## Philosophy
-
-The [Psr-11](https://www.php-fig.org/psr/psr-11/) standard normalize the way values are retrieved from a [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection) container. It defines an interface named `Psr\Container\ContainerInterface` declaring two methods: `has($id)` returning whether an `$id` entry is defined in the container and `get($id)` returning it.
-
-From the point of view of something consuming a [Psr-11](https://www.php-fig.org/psr/psr-11/) container, it just looks like a map of values:
-
-```php
-<?php
-
-use Psr\Container\ContainerInterface;
-
-$consumer = function (ContainerInterface $container) {
-
-    // Check whether an 'some.service' entry is defined in the container.
-    $container->has('some.service');
-
-    // Retrieve the 'some.service' entry.
-    $service = $container->get('some.service');
-
-    // ...
-
-}
-```
-
-Defining container entries and the way they are built depends on the implementation. It usually involves configuration files, service providers, auto wiring algorithms and other complex mechanisms.
-
-The class `Quanta\Container` is a [Psr-11](https://www.php-fig.org/psr/psr-11/) implementation built around the idea defining the entries and providing them are two separate concerns. It aims to be the tiniest possible layer around an associative array of factories:
-
-```php
-<?php
-
-// An associative array of factories.
-$factories = [
-    'id1' => function ($container) { /* ... */ },
-    'id2' => function ($container) { /* ... */ },
-];
-```
-
-Factories used by `Quanta\Container` can be any [callable](http://php.net/manual/en/language.types.callable.php) and can return any value. They are called with the container as first argument so it can be used to retrieve the entry's dependencies:
-
-```php
-<?php
-
-// A factory producing a SomeService object.
-$factory = function ($container) {
-    $dependency = $container->get('dependency');
-
-    return new SomeService($dependency);
-};
-```
-
-Developers are free to choose how to build the associative array of factories while `Quanta\Container` focuses on being as efficient as possible to retrieve the values they produce.
-
-## Design
-
-`Quanta\Container` implements [Psr-11](https://www.php-fig.org/psr/psr-11/) `Psr\Container\ContainerInterface`.
-
-The only way to define factories for `Quanta\Container` is passing them through its constructor. This is a design choice: once the container is built we want to be sure no piece of code can alter its state.
-
-The same value is returned every time the `get($id)` method is called with the same identifier. It means the factory associated with the `$id` entry is executed only on the first call and the produced value is cached to be returned on subsequent calls. This is especially important when the value is an object because the same instance is returned when retrieved multiple times.
-
-The `get($id)` methods can throw two different exceptions:
-
-- `Quanta\Container\NotFoundException` when no `$id` entry is defined
-
-- `Quanta\Container\ContainerException` wrapped around any exception thrown from the factory
-
-The second one allow to keep track of all the container entries failling because of the original exception.
-
 ## Usage
 
 ```php
 <?php
 
-use Quanta\Container;
+// instantiation through named constructor (only way).
+$container = Quanta\Container::from([
+    SomeService::class => fn ($container) => new SomeService(
+        $container->get(SomeDependency::class),
+    ),
 
-// Initialize the container with an associative array of factories.
-$container = new Container([
-    'some.config' => function () {
-        return 'config value';
-    },
+    SomeDependency::class => fn () => new SomeDependency,
 
-    SomeDependency::class => function ($container) {
-        $config = $container->get('some.config');
-
-        return new SomeDependency($config);
-    },
-
-    SomeService::class => function ($container) {
-        $dependency = $container->get(SomeDependency::class);
-
-        return new SomeService($dependency);
-    },
-]);
-
-// Quanta\Container is a Psr-11 implementation.
-$container instanceof Psr\Container\ContainerInterface // returns true.
-
-// Check whether an entry is defined in the container.
-$container->has('not.defined'); // returns false.
-$container->has(SomeService::class); // returns true.
-
-// Retrieve the value of the SomeService::class entry.
-$service1 = $container->get(SomeService::class); // returns the defined instance of SomeService.
-$service2 = $container->get(SomeService::class); // returns the same instance of SomeService.
-
-$service1 === $service2 // returns true.
-```
-
-```php
-<?php
-
-use Quanta\Container;
-
-// Initialize a container with failling entries.
-$container = new Container([
     'throwing' => function () {
-        throw new Exception('The original exception');
-    },
-
-    SomeService::class => function ($container) {
-        $dependency = $container->get('throwing');
-
-        return new SomeService($dependency);
+        throw new Exception('some exception');
     },
 ]);
 
-// Throws a Quanta\Container\NotFoundException.
-$container->get('notfound');
+// true
+$container instanceof Psr\Container\ContainerInterface;
 
-// Throws a Quanta\Container\ContainerException. It should display something like:
-// - Exception: The original exception ...
-//   ...
-// - Next Quanta\Container\ContainerException: The factory producing the 'throwing' container entry has thrown an uncaught exception ...
-//   ...
-// - Next Quanta\Container\ContainerException: The factory producing the 'SomeService' container entry has thrown an uncaught exception ...
-//   ...
+// true
+$container->has(SomeService::class);
+
+// false
+$container->has('not.defined');
+
+// new SomeService(new SomeDependency)
+$container->get(SomeService::class);
+
+// true
+$container->get(SomeService::class) === $container->get(SomeService::class);
+
+// No 'not.defined' entry defined in the container
 try {
-    $container->get(SomeService::class);
+    $container->get('not.defined');
 }
+
+catch (Quanta\Container\NotFoundException $e) {
+    echo $e->getMessage() . "\n";
+}
+
+// The factory producing the 'throwing' container entry has thrown an uncaught exception
+// some exception
+try {
+    $container->get('throwing');
+}
+
 catch (Quanta\Container\ContainerException $e) {
-    echo (string) $e;
+    echo $e->getMessage() . "\n";
+    echo $e->getPrevious()->getMessage() . "\n";
 }
 ```

@@ -18,34 +18,70 @@ final class Container implements ContainerInterface
      * The second value is populated when the factory is invoked on the first
      * `get($id)` method call.
      *
-     * This data structure allows the container to perform only one lookup when
-     * retrieving an entry.
-     *
-     * @var array[]
+     * @var array<string, null|array<callable>|array<callable, mixed>>
      */
     private $map;
 
     /**
-     * Constructor.
-     *
-     * The map is built by creating entries from the factories.
-     *
-     * @see $this->map
+     * Named constructor building the map from an array of factories.
      *
      * @param callable[] $factories
+     * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
-    public function __construct(array $factories)
+    public static function from(array $factories): self
     {
-        $result = \Quanta\ArrayTypeCheck::type('callable')->on($factories);
+        $map = [];
 
-        if ($result->isFailure()) {
-            throw new \InvalidArgumentException(
-                $result->constructor($this, 1)
-            );
+        foreach ($factories as $id => $factory) {
+            if (!is_callable($factory)) {
+                throw new \InvalidArgumentException(
+                    self::invalidFactoryTypeErrorMessage($id, $factory),
+                );
+            }
+
+            $map[(string) $id] = [$factory];
         }
 
-        $this->map = array_map([$this, 'entry'], $factories);
+        return new self($map);
+    }
+
+    /**
+     * Return the message of the exception thrown when a factory is not callable.
+     *
+     * @param int|string    $id
+     * @param mixed         $factory
+     * @return string
+     */
+    private static function invalidFactoryTypeErrorMessage($id, $factory): string
+    {
+        $tpl = 'Argument 1 passed to %s::from() must be an array of callable values, %s given for key \'%s\'';
+
+        return sprintf($tpl, self::class, gettype($factory), $id);
+    }
+
+    /**
+     * Return the message of the exception thrown when an identifier is not a string.
+     *
+     * @param string    $method
+     * @param mixed     $id
+     * @return string
+     */
+    private static function invalidIdentifierTypeErrorMessage(string $method, $id): string
+    {
+        $tpl = 'Argument 1 passed to %s::%s() must be of the type string, %s given';
+
+        return sprintf($tpl, self::class, $method, gettype($id));
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param array<string, array<callable>> $map
+     */
+    private function __construct(array $map)
+    {
+        $this->map = $map;
     }
 
     /**
@@ -54,26 +90,24 @@ final class Container implements ContainerInterface
     public function get($id)
     {
         // Ensure the id is a string.
-        if (! is_string($id)) {
+        if (!is_string($id)) {
             throw new \InvalidArgumentException(
-                $this->invalidIdentifierTypeErrorMessage('get', $id)
+                self::invalidIdentifierTypeErrorMessage('get', $id)
             );
         }
 
-        /**
-         * Get a reference to the array associated to this id in the map.
-         *
-         * Docblock for phpstan.
-         *
-         * @var array|null
-         */
+        // Get a reference to the array associated to this id in the map.
         $ref = &$this->map[$id];
 
         // Fail when the given id is not present in the map (= null ref).
-        if (is_null($ref)) throw new NotFoundException($id);
+        if (is_null($ref)) {
+            throw new NotFoundException($id);
+        }
 
         // Return the entry when cached (= the array has two values).
-        if (count($ref) == 2) return $ref[1];
+        if (count($ref) == 2) {
+            return $ref[1];
+        }
 
         // Execute the factory and cache its result.
         try {
@@ -96,41 +130,13 @@ final class Container implements ContainerInterface
     public function has($id)
     {
         // Ensure the id is a string.
-        if (! is_string($id)) {
+        if (!is_string($id)) {
             throw new \InvalidArgumentException(
-                $this->invalidIdentifierTypeErrorMessage('has', $id)
+                self::invalidIdentifierTypeErrorMessage('has', $id)
             );
         }
 
         // Return whether the given id is in the map.
         return isset($this->map[$id]);
-    }
-
-    /**
-     * Return an entry from the given factory.
-     *
-     * @see $this->map
-     *
-     * @param callable $factory
-     * @return array
-     */
-    private function entry(callable $factory): array
-    {
-        return [$factory];
-    }
-
-    /**
-     * Return the message of the exception thrown when an identifier is not a
-     * string.
-     *
-     * @param string    $method
-     * @param mixed     $id
-     * @return string
-     */
-    private function invalidIdentifierTypeErrorMessage(string $method, $id): string
-    {
-        $tpl = 'Argument 1 passed to %s::%s method must be of the type string, %s given';
-
-        return sprintf($tpl, Container::class, $method, gettype($id));
     }
 }

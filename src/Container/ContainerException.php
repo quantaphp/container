@@ -16,8 +16,6 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
     {
         $tpl = 'The factory producing the \'%s\' container entry has thrown an uncaught exception';
 
-        $msg = sprintf($tpl, $id);
-
-        parent::__construct($msg, 0, $previous);
+        parent::__construct(sprintf($tpl, $id), 0, $previous);
     }
 }
