@@ -29,15 +29,18 @@ final class Container implements ContainerInterface
      * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
-    public static function from(array $factories): self
+    public static function factories(array $factories): self
     {
         $map = [];
 
         foreach ($factories as $id => $factory) {
             if (!is_callable($factory)) {
-                throw new \InvalidArgumentException(
-                    self::invalidFactoryTypeErrorMessage($id, $factory),
-                );
+                throw new \InvalidArgumentException(sprintf(
+                    'Argument 1 passed to %s::factories() must be an array of callable values, %s given for key \'%s\'',
+                    self::class,
+                    gettype($factory),
+                    $id,
+                ));
             }
 
             $map[(string) $id] = [$factory];
@@ -47,17 +50,61 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Return the message of the exception thrown when a factory is not callable.
+     * Named constructor building the map from a list of glob patterns.
      *
-     * @param int|string    $id
-     * @param mixed         $factory
-     * @return string
+     * Matched files must return an array of callables.
+     *
+     * @param string $pattern
+     * @param string ...$patterns
+     * @return \Quanta\Container
+     * @throws \RuntimeException
+     * @throws \UnexpectedValueException
      */
-    private static function invalidFactoryTypeErrorMessage($id, $factory): string
+    public static function files(string $pattern, string ...$patterns): self
     {
-        $tpl = 'Argument 1 passed to %s::from() must be an array of callable values, %s given for key \'%s\'';
+        $map = [];
 
-        return sprintf($tpl, self::class, gettype($factory), $id);
+        $patterns = array_merge([$pattern], $patterns);
+
+        foreach ($patterns as $pattern) {
+            $files = glob($pattern);
+
+            if ($files === false) {
+                throw new \RuntimeException(sprintf(
+                    'Failed to use \'%s\' as glob pattern',
+                    $pattern,
+                ));
+            }
+
+            $files = array_filter($files, 'is_file');
+
+            foreach ($files as $file) {
+                $factories = require $file;
+
+                if (!is_array($factories)) {
+                    throw new \UnexpectedValueException(sprintf(
+                        'Value returned by file \'%s\' must be an array of callable values, %s returned',
+                        $file,
+                        gettype($factories),
+                    ));
+                }
+
+                foreach ($factories as $id => $factory) {
+                    if (!is_callable($factory)) {
+                        throw new \UnexpectedValueException(sprintf(
+                            'Value returned by file \'%s\' must be an array of callable values, %s given for key \'%s\'',
+                            $file,
+                            gettype($factory),
+                            $id,
+                        ));
+                    }
+
+                    $map[(string) $id] = [$factory];
+                }
+            }
+        }
+
+        return new self($map);
     }
 
     /**

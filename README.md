@@ -3,7 +3,8 @@
 This package provides a minimalist dependency injection container implementing [Psr-11](https://www.php-fig.org/psr/psr-11/).
 
 - [Getting started](#getting-started)
-- [Usage](#usage)
+- [Basic usage](#basic-usage)
+- [Usage with factory files](#usage-with-factory-files)
 
 ## Getting started
 
@@ -13,13 +14,13 @@ This package provides a minimalist dependency injection container implementing [
 
 **Run tests** `./vendor/bin/kahlan`
 
-## Usage
+## Basic usage
 
 ```php
 <?php
 
-// instantiation through named constructor (only way).
-$container = Quanta\Container::from([
+// instantiation using an associative array of factories
+$container = Quanta\Container::factories([
     SomeService::class => fn ($container) => new SomeService(
         $container->get(SomeDependency::class),
     ),
@@ -65,4 +66,70 @@ catch (Quanta\Container\ContainerException $e) {
     echo $e->getMessage() . "\n";
     echo $e->getPrevious()->getMessage() . "\n";
 }
+```
+
+## Usage with factory files
+
+```php
+# /app/factories/services1.php
+<?php
+
+return [
+    SomeService::class => fn ($container) => new SomeService(
+        $container->get(SomeDependency::class),
+    ),
+];
+```
+
+```php
+# /app/factories/services2.php
+<?php
+
+return [
+    SomeDependency::class => fn () => new SomeDependency,
+];
+```
+
+```php
+<?php
+
+// instantiation using a list of files returning associative arrays of factories
+$container = Quanta\Container::files(
+    '/app/factories/services1.php',
+    '/app/factories/services2.php',
+);
+
+// true
+$container->has(SomeService::class);
+
+// new SomeService(new SomeDependency)
+$container->get(SomeService::class);
+```
+
+```php
+<?php
+
+// instantiation using a glob pattern matching files returning associative
+// arrays of factories
+$container = Quanta\Container::files('/app/factories/*.php');
+
+// true
+$container->has(SomeService::class);
+
+// new SomeService(new SomeDependency)
+$container->get(SomeService::class);
+```
+
+```php
+<?php
+
+// instantiation using a list of  glob patterns matching files returning
+// associative arrays of factories
+$container = Quanta\Container::files('/app/factories/*1.php', '/app/factories/*2.php');
+
+// true
+$container->has(SomeService::class);
+
+// new SomeService(new SomeDependency)
+$container->get(SomeService::class);
 ```

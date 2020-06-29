@@ -8,18 +8,21 @@ use Quanta\Container;
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
 
-describe('Container::from()', function () {
+describe('Container::factories()', function () {
 
     context('when the given array contains only callable values', function () {
 
         it('should return an instance of Container', function () {
-            $test = Container::from([
+            $test = Container::factories([
                 'id1' => fn () => 'value1',
                 'id2' => fn () => 'value2',
                 'id3' => fn () => 'value3',
             ]);
 
             expect($test)->toBeAnInstanceOf(Container::class);
+            expect($test->has('id1'))->toBeTruthy();
+            expect($test->has('id2'))->toBeTruthy();
+            expect($test->has('id3'))->toBeTruthy();
         });
 
     });
@@ -27,7 +30,7 @@ describe('Container::from()', function () {
     context('when the given array does not contain only callable values', function () {
 
         it('should throw an InvalidArgumentException', function () {
-            $test = fn () => Container::from([
+            $test = fn () => Container::factories([
                 'id1' => fn () => 'value1',
                 'id2' => 'value2',
                 'id3' => fn () => 'value3',
@@ -40,10 +43,99 @@ describe('Container::from()', function () {
 
 });
 
+describe('Container::files()', function () {
+
+    context('when only one glob pattern is given', function () {
+
+        context('when a matched file does not return an array', function () {
+
+            it('should throw an UnexpectedValueException', function () {
+                $test = fn () => Quanta\Container::files(__DIR__ . '/files/case1/*.php');
+
+                expect($test)->toThrow(new UnexpectedValueException);
+            });
+
+        });
+
+        context('when a matched file does not return an array of callable', function () {
+
+            it('should throw an UnexpectedValueException', function () {
+                $test = fn () => Quanta\Container::files(__DIR__ . '/files/case2/*.php');
+
+                expect($test)->toThrow(new UnexpectedValueException);
+            });
+
+        });
+
+        context('when all matched files return an array of callables', function () {
+
+            it('should return an instance of Container', function () {
+                $test = Quanta\Container::files(__DIR__ . '/files/case3/*.php');
+
+                expect($test)->toBeAnInstanceOf(Container::class);
+                expect($test->has('id11'))->toBeTruthy();
+                expect($test->has('id12'))->toBeTruthy();
+                expect($test->has('id21'))->toBeTruthy();
+                expect($test->has('id22'))->toBeTruthy();
+            });
+
+        });
+
+    });
+
+    context('when many glob patterns are given', function () {
+
+        context('when a matched file does not return an array', function () {
+
+            it('should throw an UnexpectedValueException', function () {
+                $test = fn () => Quanta\Container::files(
+                    __DIR__ . '/files/case1/*.php',
+                    __DIR__ . '/files/case3/*.php',
+                );
+
+                expect($test)->toThrow(new UnexpectedValueException);
+            });
+
+        });
+
+        context('when a matched file does not return an array of callable', function () {
+
+            it('should throw an UnexpectedValueException', function () {
+                $test = fn () => Quanta\Container::files(
+                    __DIR__ . '/files/case2/*.php',
+                    __DIR__ . '/files/case3/*.php',
+                );
+
+                expect($test)->toThrow(new UnexpectedValueException);
+            });
+
+        });
+
+        context('when all matched files return an array of callables', function () {
+
+            it('should return an instance of Container', function () {
+                $test = Quanta\Container::files(
+                    __DIR__ . '/files/case3/v*1.php',
+                    __DIR__ . '/files/case3/v*2.php',
+                );
+
+                expect($test)->toBeAnInstanceOf(Container::class);
+                expect($test->has('id11'))->toBeTruthy();
+                expect($test->has('id12'))->toBeTruthy();
+                expect($test->has('id21'))->toBeTruthy();
+                expect($test->has('id22'))->toBeTruthy();
+            });
+
+        });
+
+    });
+
+});
+
 describe('Container', function () {
 
     beforeEach(function () {
-        $this->container = Container::from([
+        $this->container = Container::factories([
             'id' => $this->factory = stub(),
         ]);
     });
