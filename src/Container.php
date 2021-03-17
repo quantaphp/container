@@ -18,107 +18,47 @@ final class Container implements ContainerInterface
      * The second value is populated when the factory is invoked on the first
      * `get($id)` method call.
      *
-     * @var array<string, null|array<callable>|array<callable, mixed>>
+     * @var array<string, null|array>
      */
-    private $map;
+    private array $map;
 
     /**
-     * Named constructor building the map from an array of factories.
+     * Build a container from iterablesan iterable containing factories.
      *
-     * @param callable[] $factories
+     * @param iterable<string, callable> $factories
      * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
-    public static function factories(array $factories): self
+    public static function factories(iterable $factories): self
     {
         $map = [];
 
         foreach ($factories as $id => $factory) {
+            try {
+                $id = strval($id);
+            }
+
+            catch (\Throwable $e) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Argument 1 passed to %s::factories() must be an iterable with stringable keys, %s given',
+                    self::class,
+                    gettype($id),
+                ), 0, $e);
+            }
+
             if (!is_callable($factory)) {
                 throw new \InvalidArgumentException(sprintf(
-                    'Argument 1 passed to %s::factories() must be an array of callable values, %s given for key \'%s\'',
+                    'Argument 1 passed to %s::factories() must be an iterable with callable values, %s given for key \'%s\'',
                     self::class,
                     gettype($factory),
                     $id,
                 ));
             }
 
-            $map[(string) $id] = [$factory];
+            $map[$id] = [$factory];
         }
 
         return new self($map);
-    }
-
-    /**
-     * Named constructor building the map from a list of glob patterns.
-     *
-     * Matched files must return an array of callables.
-     *
-     * @param string $pattern
-     * @param string ...$patterns
-     * @return \Quanta\Container
-     * @throws \RuntimeException
-     * @throws \UnexpectedValueException
-     */
-    public static function files(string $pattern, string ...$patterns): self
-    {
-        $map = [];
-
-        $patterns = array_merge([$pattern], $patterns);
-
-        foreach ($patterns as $pattern) {
-            $files = glob($pattern);
-
-            if ($files === false) {
-                throw new \RuntimeException(sprintf(
-                    'Failed to use \'%s\' as glob pattern',
-                    $pattern,
-                ));
-            }
-
-            $files = array_filter($files, 'is_file');
-
-            foreach ($files as $file) {
-                $factories = require $file;
-
-                if (!is_array($factories)) {
-                    throw new \UnexpectedValueException(sprintf(
-                        'Value returned by file \'%s\' must be an array of callable values, %s returned',
-                        $file,
-                        gettype($factories),
-                    ));
-                }
-
-                foreach ($factories as $id => $factory) {
-                    if (!is_callable($factory)) {
-                        throw new \UnexpectedValueException(sprintf(
-                            'Value returned by file \'%s\' must be an array of callable values, %s given for key \'%s\'',
-                            $file,
-                            gettype($factory),
-                            $id,
-                        ));
-                    }
-
-                    $map[(string) $id] = [$factory];
-                }
-            }
-        }
-
-        return new self($map);
-    }
-
-    /**
-     * Return the message of the exception thrown when an identifier is not a string.
-     *
-     * @param string    $method
-     * @param mixed     $id
-     * @return string
-     */
-    private static function invalidIdentifierTypeErrorMessage(string $method, $id): string
-    {
-        $tpl = 'Argument 1 passed to %s::%s() must be of the type string, %s given';
-
-        return sprintf($tpl, self::class, $method, gettype($id));
     }
 
     /**
@@ -138,9 +78,7 @@ final class Container implements ContainerInterface
     {
         // Ensure the id is a string.
         if (!is_string($id)) {
-            throw new \InvalidArgumentException(
-                self::invalidIdentifierTypeErrorMessage('get', $id)
-            );
+            throw new \InvalidArgumentException($this->invalidIdErrorMessage('get', $id));
         }
 
         // Get a reference to the array associated to this id in the map.
@@ -167,7 +105,7 @@ final class Container implements ContainerInterface
         // This is not possible anymore to recover from a specific exception
         // thrown from a factory but it does not make sense anyway (usecase ?)
         catch (\Throwable $e) {
-            throw new ContainerException($id, $e);
+            throw new ContainerException($id, 0, $e);
         }
     }
 
@@ -178,12 +116,24 @@ final class Container implements ContainerInterface
     {
         // Ensure the id is a string.
         if (!is_string($id)) {
-            throw new \InvalidArgumentException(
-                self::invalidIdentifierTypeErrorMessage('has', $id)
-            );
+            throw new \InvalidArgumentException($this->invalidIdErrorMessage('has', $id));
         }
 
         // Return whether the given id is in the map.
         return isset($this->map[$id]);
+    }
+
+    /**
+     * Return the message of the exception thrown when an identifier is not a string.
+     *
+     * @param string    $method
+     * @param mixed     $id
+     * @return string
+     */
+    private static function invalidIdErrorMessage(string $method, $id): string
+    {
+        $tpl = 'Argument 1 passed to %s::%s() must be of the type string, %s given';
+
+        return sprintf($tpl, self::class, $method, gettype($id));
     }
 }

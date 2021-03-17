@@ -9,7 +9,7 @@ describe('ContainerException', function () {
     beforeEach(function () {
         $this->previous = new Exception('test');
 
-        $this->exception = new ContainerException('id', $this->previous);
+        $this->exception = new ContainerException('id', 0, $this->previous);
     });
 
     it('should implement Throwable', function () {

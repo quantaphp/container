@@ -10,12 +10,13 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
      * Constructor.
      *
      * @param string        $id
+     * @param int           $code
      * @param \Throwable    $previous
      */
-    public function __construct(string $id, \Throwable $previous)
+    public function __construct(string $id, int $code, \Throwable $previous)
     {
         $tpl = 'The factory producing the \'%s\' container entry has thrown an uncaught exception';
 
-        parent::__construct(sprintf($tpl, $id), 0, $previous);
+        parent::__construct(sprintf($tpl, $id), $code, $previous);
     }
 }

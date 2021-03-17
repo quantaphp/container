@@ -10,120 +10,162 @@ use Quanta\Container\ContainerException;
 
 describe('Container::factories()', function () {
 
-    context('when the given array contains only callable values', function () {
+    context('when the given iterable is an array', function () {
 
-        it('should return an instance of Container', function () {
-            $test = Container::factories([
-                'id1' => fn () => 'value1',
-                'id2' => fn () => 'value2',
-                'id3' => fn () => 'value3',
-            ]);
-
-            expect($test)->toBeAnInstanceOf(Container::class);
-            expect($test->has('id1'))->toBeTruthy();
-            expect($test->has('id2'))->toBeTruthy();
-            expect($test->has('id3'))->toBeTruthy();
-        });
-
-    });
-
-    context('when the given array does not contain only callable values', function () {
-
-        it('should throw an InvalidArgumentException', function () {
-            $test = fn () => Container::factories([
-                'id1' => fn () => 'value1',
-                'id2' => 'value2',
-                'id3' => fn () => 'value3',
-            ]);
-
-            expect($test)->toThrow(new InvalidArgumentException);
-        });
-
-    });
-
-});
-
-describe('Container::files()', function () {
-
-    context('when only one glob pattern is given', function () {
-
-        context('when a matched file does not return an array', function () {
-
-            it('should throw an UnexpectedValueException', function () {
-                $test = fn () => Quanta\Container::files(__DIR__ . '/files/case1/*.php');
-
-                expect($test)->toThrow(new UnexpectedValueException);
-            });
-
-        });
-
-        context('when a matched file does not return an array of callable', function () {
-
-            it('should throw an UnexpectedValueException', function () {
-                $test = fn () => Quanta\Container::files(__DIR__ . '/files/case2/*.php');
-
-                expect($test)->toThrow(new UnexpectedValueException);
-            });
-
-        });
-
-        context('when all matched files return an array of callables', function () {
+        context('when the given array contains only stringable keys and callable values', function () {
 
             it('should return an instance of Container', function () {
-                $test = Quanta\Container::files(__DIR__ . '/files/case3/*.php');
+                $factories = [
+                    'id1' => fn () => 'value1',
+                    2 => fn () => 'value2',
+                    'id3' => fn () => 'value3',
+                ];
+
+                $test = Container::factories($factories);
 
                 expect($test)->toBeAnInstanceOf(Container::class);
-                expect($test->has('id11'))->toBeTruthy();
-                expect($test->has('id12'))->toBeTruthy();
-                expect($test->has('id21'))->toBeTruthy();
-                expect($test->has('id22'))->toBeTruthy();
+                expect($test->has('id1'))->toBeTruthy();
+                expect($test->has('2'))->toBeTruthy();
+                expect($test->has('id3'))->toBeTruthy();
+            });
+
+        });
+
+        context('when the given array does not contain only callable values', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $factories = [
+                    'id1' => fn () => 'value1',
+                    'id2' => 'value2',
+                    'id3' => fn () => 'value3',
+                ];
+
+                $test = fn () => Container::factories($factories);
+
+                expect($test)->toThrow(new InvalidArgumentException);
             });
 
         });
 
     });
 
-    context('when many glob patterns are given', function () {
+    context('when the given iterable is an Iterator', function () {
 
-        context('when a matched file does not return an array', function () {
-
-            it('should throw an UnexpectedValueException', function () {
-                $test = fn () => Quanta\Container::files(
-                    __DIR__ . '/files/case1/*.php',
-                    __DIR__ . '/files/case3/*.php',
-                );
-
-                expect($test)->toThrow(new UnexpectedValueException);
-            });
-
-        });
-
-        context('when a matched file does not return an array of callable', function () {
-
-            it('should throw an UnexpectedValueException', function () {
-                $test = fn () => Quanta\Container::files(
-                    __DIR__ . '/files/case2/*.php',
-                    __DIR__ . '/files/case3/*.php',
-                );
-
-                expect($test)->toThrow(new UnexpectedValueException);
-            });
-
-        });
-
-        context('when all matched files return an array of callables', function () {
+        context('when the given Iterator contains only stringable keys and callable values', function () {
 
             it('should return an instance of Container', function () {
-                $test = Quanta\Container::files(
-                    __DIR__ . '/files/case3/v*1.php',
-                    __DIR__ . '/files/case3/v*2.php',
-                );
+                $factories = new ArrayIterator([
+                    'id1' => fn () => 'value1',
+                    2 => fn () => 'value2',
+                    'id3' => fn () => 'value3',
+                ]);
+
+                $test = Container::factories($factories);
 
                 expect($test)->toBeAnInstanceOf(Container::class);
-                expect($test->has('id11'))->toBeTruthy();
-                expect($test->has('id12'))->toBeTruthy();
-                expect($test->has('id21'))->toBeTruthy();
-                expect($test->has('id22'))->toBeTruthy();
+                expect($test->has('id1'))->toBeTruthy();
+                expect($test->has('2'))->toBeTruthy();
+                expect($test->has('id3'))->toBeTruthy();
+            });
+
+        });
+
+        context('when the given Iterator does not contain only stringable keys', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $factories = (function () {
+                    yield 'id1' => fn () => 'value1';
+                    yield new class {} => fn () => 'value2';
+                    yield 'id3' => fn () => 'value3';
+                })();
+
+                $test = fn () => Container::factories($factories);
+
+                expect($test)->toThrow(new InvalidArgumentException);
+            });
+
+        });
+
+        context('when the given Iterator does not contain only callable values', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $factories = new ArrayIterator([
+                    'id1' => fn () => 'value1',
+                    'id2' => 'value2',
+                    'id3' => fn () => 'value3',
+                ]);
+
+                $test = fn () => Container::factories($factories);
+
+                expect($test)->toThrow(new InvalidArgumentException);
+            });
+
+        });
+
+    });
+
+    context('when the given iterable is an IteratorAggregate', function () {
+
+        context('when the given IteratorAggregate contains only stringable keys and callable values', function () {
+
+            it('should return an instance of Container', function () {
+                $factories = new class implements IteratorAggregate {
+                    public function getIterator()
+                    {
+                        return new ArrayIterator([
+                            'id1' => fn () => 'value1',
+                            2 => fn () => 'value2',
+                            'id3' => fn () => 'value3',
+                        ]);
+                    }
+                };
+
+                $test = Container::factories($factories);
+
+                expect($test)->toBeAnInstanceOf(Container::class);
+                expect($test->has('id1'))->toBeTruthy();
+                expect($test->has('2'))->toBeTruthy();
+                expect($test->has('id3'))->toBeTruthy();
+            });
+
+        });
+
+        context('when the given IteratorAggregate does not contain only stringable keys', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $factories = new class implements IteratorAggregate {
+                    public function getIterator()
+                    {
+                        yield 'id1' => fn () => 'value1';
+                        yield new class {} => fn () => 'value2';
+                        yield 'id3' => fn () => 'value3';
+                    }
+                };
+
+                $test = fn () => Container::factories($factories);
+
+                expect($test)->toThrow(new InvalidArgumentException);
+            });
+
+        });
+
+        context('when the given IteratorAggregate does not contain only callable values', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $factories = new class implements IteratorAggregate {
+                    public function getIterator()
+                    {
+                        return new ArrayIterator([
+                            'id1' => fn () => 'value1',
+                            'id2' => 'value2',
+                            'id3' => fn () => 'value3',
+                        ]);
+                    }
+                };
+
+                $test = fn () => Container::factories($factories);
+
+                expect($test)->toThrow(new InvalidArgumentException);
             });
 
         });
@@ -151,6 +193,26 @@ describe('Container', function () {
     });
 
     describe('->get()', function () {
+
+        context('when the given id is not a string', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $test = fn () => $this->container->get(1);
+
+                expect($test)->toThrow(new InvalidArgumentException);
+            });
+
+        });
+
+        context('when the given id is not associated to a factory', function () {
+
+            it('should throw a NotFoundException', function () {
+                $test = fn () => $this->container->get('notdefined');
+
+                expect($test)->toThrow(new NotFoundException('notdefined'));
+            });
+
+        });
 
         context('when the given id is a string', function () {
 
@@ -195,31 +257,11 @@ describe('Container', function () {
 
                         $test = fn () => $this->container->get('id');
 
-                        expect($test)->toThrow(new ContainerException('id', $exception));
+                        expect($test)->toThrow(new ContainerException('id', 0, $exception));
                     });
 
                 });
 
-            });
-
-            context('when the given id is not associated to a factory', function () {
-
-                it('should throw a NotFoundException', function () {
-                    $test = fn () => $this->container->get('notdefined');
-
-                    expect($test)->toThrow(new NotFoundException('notdefined'));
-                });
-
-            });
-
-        });
-
-        context('when the given id is not a string', function () {
-
-            it('should throw an InvalidArgumentException', function () {
-                $test = fn () => $this->container->get(1);
-
-                expect($test)->toThrow(new InvalidArgumentException);
             });
 
         });
@@ -227,6 +269,16 @@ describe('Container', function () {
     });
 
     describe('->has()', function () {
+
+        context('when the given id is not a string', function () {
+
+            it('should throw an InvalidArgumentException', function () {
+                $test = fn () => $this->container->has(1);
+
+                expect($test)->toThrow(new InvalidArgumentException);
+            });
+
+        });
 
         context('when the given id is a string', function () {
 
@@ -248,16 +300,6 @@ describe('Container', function () {
                     expect($test)->toBeFalsy();
                 });
 
-            });
-
-        });
-
-        context('when the given id is not a string', function () {
-
-            it('should throw an InvalidArgumentException', function () {
-                $test = fn () => $this->container->has(1);
-
-                expect($test)->toThrow(new InvalidArgumentException);
             });
 
         });
