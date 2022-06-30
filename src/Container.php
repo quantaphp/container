@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace Quanta;
 
@@ -18,7 +20,7 @@ final class Container implements ContainerInterface
      * The second value is populated when the factory is invoked on the first
      * `get($id)` method call.
      *
-     * @var array<string, null|array>
+     * @var array<string, null|array{0: callable, 1?: mixed}>
      */
     private array $map;
 
@@ -36,9 +38,7 @@ final class Container implements ContainerInterface
         foreach ($factories as $id => $factory) {
             try {
                 $id = strval($id);
-            }
-
-            catch (\Throwable $e) {
+            } catch (\Throwable $e) {
                 throw new \InvalidArgumentException(sprintf(
                     'Argument 1 passed to %s::factories() must be an iterable with stringable keys, %s given',
                     self::class,
@@ -64,7 +64,7 @@ final class Container implements ContainerInterface
     /**
      * Constructor.
      *
-     * @param array<string, array<callable>> $map
+     * @param array<string, array{0: callable}> $map
      */
     private function __construct(array $map)
     {
@@ -74,13 +74,8 @@ final class Container implements ContainerInterface
     /**
      * @inheritdoc
      */
-    public function get($id)
+    public function get(string $id)
     {
-        // Ensure the id is a string.
-        if (!is_string($id)) {
-            throw new \InvalidArgumentException($this->invalidIdErrorMessage('get', $id));
-        }
-
         // Get a reference to the array associated to this id in the map.
         $ref = &$this->map[$id];
 
@@ -89,8 +84,8 @@ final class Container implements ContainerInterface
             throw new NotFoundException($id);
         }
 
-        // Return the entry when cached (= the array has two values).
-        if (count($ref) == 2) {
+        // Return the entry when cached (= offset 1 is set).
+        if (array_key_exists(1, $ref)) {
             return $ref[1];
         }
 
@@ -112,28 +107,8 @@ final class Container implements ContainerInterface
     /**
      * @inheritdoc
      */
-    public function has($id)
+    public function has(string $id): bool
     {
-        // Ensure the id is a string.
-        if (!is_string($id)) {
-            throw new \InvalidArgumentException($this->invalidIdErrorMessage('has', $id));
-        }
-
-        // Return whether the given id is in the map.
         return isset($this->map[$id]);
-    }
-
-    /**
-     * Return the message of the exception thrown when an identifier is not a string.
-     *
-     * @param string    $method
-     * @param mixed     $id
-     * @return string
-     */
-    private static function invalidIdErrorMessage(string $method, $id): string
-    {
-        $tpl = 'Argument 1 passed to %s::%s() must be of the type string, %s given';
-
-        return sprintf($tpl, self::class, $method, gettype($id));
     }
 }
