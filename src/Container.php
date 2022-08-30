@@ -20,22 +20,22 @@ final class Container implements ContainerInterface
      * The second value is populated when the factory is invoked on the first
      * `get($id)` method call.
      *
-     * @var array<string, null|array{0: callable, 1?: mixed}>
+     * @var array<string, null|array{0: callable|null, 1?: mixed}>
      */
     private array $map;
 
     /**
-     * Build a container from iterablesan iterable containing factories.
+     * Build a container from an iterable containing factories or values.
      *
-     * @param iterable<string, callable> $factories
+     * @param iterable<string, mixed> $values
      * @return \Quanta\Container
      * @throws \InvalidArgumentException
      */
-    public static function factories(iterable $factories): self
+    public static function factories(iterable $values): self
     {
         $map = [];
 
-        foreach ($factories as $id => $factory) {
+        foreach ($values as $id => $value) {
             try {
                 $id = strval($id);
             } catch (\Throwable $e) {
@@ -46,16 +46,7 @@ final class Container implements ContainerInterface
                 ), 0, $e);
             }
 
-            if (!is_callable($factory)) {
-                throw new \InvalidArgumentException(sprintf(
-                    'Argument 1 passed to %s::factories() must be an iterable with callable values, %s given for key \'%s\'',
-                    self::class,
-                    gettype($factory),
-                    $id,
-                ));
-            }
-
-            $map[$id] = [$factory];
+            $map[$id] = is_callable($value) ? [$value] : [null, $value];
         }
 
         return new self($map);
@@ -64,7 +55,7 @@ final class Container implements ContainerInterface
     /**
      * Constructor.
      *
-     * @param array<string, array{0: callable}> $map
+     * @param array<string, array{0: callable|null, 1?: mixed}> $map
      */
     private function __construct(array $map)
     {
@@ -84,14 +75,17 @@ final class Container implements ContainerInterface
             throw new NotFoundException($id);
         }
 
-        // Return the entry when cached (= offset 1 is set).
+        // Return the entry when existing (= offset 1 is set).
         if (array_key_exists(1, $ref)) {
             return $ref[1];
         }
 
+        // Make phpstan happy... Exception never happen.
+        if (is_null($factory = $ref[0])) throw new \Exception;
+
         // Execute the factory and cache its result.
         try {
-            return $ref[1] = ($ref[0])($this);
+            return $ref[1] = $factory($this);
         }
 
         // Any uncaught exception is wrapped in a ContainerException because it
