@@ -12,54 +12,46 @@ use Quanta\Container\ContainerException;
 final class Container implements ContainerInterface
 {
     /**
-     * The id to entry map.
-     *
-     * An entry is an array with the factory as first element and the cached
-     * value produced by the factory as second element.
-     *
-     * The second value is populated when the factory is invoked on the first
-     * `get($id)` method call.
-     *
-     * @var array<string, null|array{0: callable|null, 1?: mixed}>
+     * @var array<string, mixed>
      */
     private array $map;
 
     /**
-     * Build a container from an iterable containing factories or values.
-     *
-     * @param iterable<string, mixed> $values
-     * @return \Quanta\Container
-     * @throws \InvalidArgumentException
+     * @var array<string, mixed>
      */
-    public static function factories(iterable $values): self
-    {
-        $map = [];
+    private array $cached;
 
-        foreach ($values as $id => $value) {
+    /**
+     * @var object
+     */
+    private $null;
+
+    /**
+     * Constructor.
+     *
+     * @param iterable<string, mixed> $map
+     */
+    public function __construct(iterable $map = [])
+    {
+        $this->map = [];
+        $this->cached = [];
+        $this->null = new class
+        {
+        };
+
+        foreach ($map as $id => $value) {
             try {
                 $id = strval($id);
             } catch (\Throwable $e) {
                 throw new \InvalidArgumentException(sprintf(
-                    'Argument 1 passed to %s::factories() must be an iterable with stringable keys, %s given',
+                    'Argument 1 passed to %s::__construct() must be an iterable with stringable keys, %s given',
                     self::class,
                     gettype($id),
                 ), 0, $e);
             }
 
-            $map[$id] = is_callable($value) ? [$value] : [null, $value];
+            $this->map[$id] = $value;
         }
-
-        return new self($map);
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param array<string, array{0: callable|null, 1?: mixed}> $map
-     */
-    private function __construct(array $map)
-    {
-        $this->map = $map;
     }
 
     /**
@@ -67,25 +59,34 @@ final class Container implements ContainerInterface
      */
     public function get(string $id)
     {
-        // Get a reference to the array associated to this id in the map.
-        $ref = &$this->map[$id];
-
-        // Fail when the given id is not present in the map (= null ref).
-        if (is_null($ref)) {
-            throw new NotFoundException($id);
-        }
-
-        // Return the entry when existing (= offset 1 is set).
-        if (array_key_exists(1, $ref)) {
-            return $ref[1];
-        }
-
-        // Make phpstan happy... Exception never happen.
-        if (is_null($factory = $ref[0])) throw new \Exception;
-
-        // Execute the factory and cache its result.
         try {
-            return $ref[1] = $factory($this);
+            // when the id is associated to a cached value.
+            if ($cached = $this->cached[$id] ?? $this->null !== $this->null) {
+                return $cached;
+            }
+
+            // check if the id is defined in the map.
+            $defined = ($value = $this->map[$id] ?? $this->null) !== $this->null;
+
+            // when id is associated to a callable.
+            if ($defined && is_callable($value)) {
+                return $this->cached[$id] = $value($this);
+            }
+
+            // when id => value pair is an interface alias.
+            if ($defined && is_string($value) && interface_exists($id)) {
+                return $this->cached[$id] = $this->get($value);
+            }
+
+            // when the id is associated to a constant value.
+            if ($defined) {
+                return $this->cached[$id] = $value;
+            }
+
+            // when the id is not defined and is a class name.
+            if (class_exists($id)) {
+                return $this->cached[$id] = $this->autowired($id);
+            }
         }
 
         // Any uncaught exception is wrapped in a ContainerException because it
@@ -96,6 +97,9 @@ final class Container implements ContainerInterface
         catch (\Throwable $e) {
             throw new ContainerException($id, 0, $e);
         }
+
+        // the id cant be associated to any value, throw a not found exception.
+        throw new NotFoundException($id);
     }
 
     /**
@@ -103,6 +107,64 @@ final class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return isset($this->map[$id]);
+        return array_key_exists($id, $this->map) || class_exists($id);
+    }
+
+    /**
+     * @param class-string $class
+     * @return object
+     */
+    private function autowired(string $class)
+    {
+        $args = [];
+
+        $reflection = new \ReflectionClass($class);
+
+        $constructor = $reflection->getConstructor();
+
+        if (is_null($constructor)) {
+            return new $class;
+        }
+
+        if (!$constructor->isPublic()) {
+            throw new \LogicException(
+                sprintf('Error while autowiring class %s: constructor is not public', $class)
+            );
+        }
+
+        foreach ($constructor->getParameters() as $parameter) {
+            $type = $parameter->getType();
+            $name = $parameter->getName();
+
+            $id = (string) $type;
+
+            if (!$parameter->hasType()) {
+                throw new \LogicException(
+                    sprintf('Error while autowiring class %s: parameter $%s has no type', $class, $name)
+                );
+            }
+
+            if (!$type instanceof \ReflectionNamedType) {
+                throw new \LogicException(
+                    sprintf('Error while autowiring class %s: parameter $%s type is not named', $class, $name)
+                );
+            }
+
+            if ($type->isBuiltin()) {
+                throw new \LogicException(
+                    sprintf('Error while autowiring class %s: parameter $%s type is not a class name', $class, $name)
+                );
+            }
+
+            if (!$this->has($id)) {
+                throw new \LogicException(
+                    sprintf('Error while autowiring class %s: parameter $%s type is not defined in the container (%s)', $class, $name, $id),
+                );
+            }
+
+            $args[] = $this->get($id);
+        }
+
+        return new $class(...$args);
     }
 }
