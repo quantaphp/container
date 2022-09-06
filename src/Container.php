@@ -8,7 +8,6 @@ use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
-use ReflectionClass;
 
 final class Container implements ContainerInterface
 {
