@@ -8,6 +8,7 @@ use Psr\Container\ContainerInterface;
 
 use Quanta\Container\NotFoundException;
 use Quanta\Container\ContainerException;
+use ReflectionClass;
 
 final class Container implements ContainerInterface
 {
@@ -59,47 +60,100 @@ final class Container implements ContainerInterface
      */
     public function get(string $id)
     {
-        try {
-            // when the id is associated to a cached value.
-            if ($cached = $this->cached[$id] ?? $this->null !== $this->null) {
-                return $cached;
-            }
+        // return the cached value when present.
+        if ($cached = $this->cached[$id] ?? $this->null !== $this->null) {
+            return $cached;
+        }
 
-            // check if the id is defined in the map.
-            $defined = ($value = $this->map[$id] ?? $this->null) !== $this->null;
+        // check if the given id has been defined and get the associated value.
+        $defined = ($value = $this->map[$id] ?? $this->null) !== $this->null;
 
-            // when id is associated to a callable.
-            if ($defined && is_callable($value)) {
+        // when the given id is associated to a callable.
+        // - execute the callable, cache the result and return it.
+        // - any exception thrown by the callable is wrapped in a ContainerException
+        //   to trace all failling entries.
+        if ($defined && is_callable($value)) {
+            try {
                 return $this->cached[$id] = $value($this);
+            } catch (\Throwable $e) {
+                throw new ContainerException($this->factoryErrorMessage($id), $e);
             }
+        }
 
-            // when id => value pair is an interface alias.
-            if ($defined && is_string($value) && interface_exists($id)) {
+        // when the given id is an interface name associated to a string.
+        // - get the value from the container, cache it and return it.
+        // - allow to alias an interface without using a factory.
+        // - any exception thrown by the container is wrapped in a ContainerException
+        //   to trace all failling entries.
+        if ($defined && is_string($value) && interface_exists($id)) {
+            try {
                 return $this->cached[$id] = $this->get($value);
-            }
-
-            // when the id is associated to a constant value.
-            if ($defined) {
-                return $this->cached[$id] = $value;
-            }
-
-            // when the id is not defined and is a class name.
-            if (class_exists($id)) {
-                return $this->cached[$id] = $this->autowired($id);
+            } catch (\Throwable $e) {
+                throw new ContainerException($this->aliasErrorMessage($id, $value), $e);
             }
         }
 
-        // Any uncaught exception is wrapped in a ContainerException because it
-        // allows to keep track of all the entries failing because of this
-        // original exception.
-        // This is not possible anymore to recover from a specific exception
-        // thrown from a factory but it does not make sense anyway (usecase ?)
-        catch (\Throwable $e) {
-            throw new ContainerException($id, 0, $e);
+        // cache any other associated value type and return it.
+        if ($defined) {
+            return $this->cached[$id] = $value;
         }
 
-        // the id cant be associated to any value, throw a not found exception.
-        throw new NotFoundException($id);
+        // The given id is not defined in the container so try to instantiate a class named id. Throw a not
+        // found exception when the id is not an existing class name.
+        //
+        // By the way this is yet nother absolute bullshit from phpstan. It forces to give ReflectionClass an
+        // existing class name whereas it accepts any string and throws when it is not an interface/class/trait
+        // name.
+        //
+        // Why should I typehint a string with a bullshit type to pass it to a constructor accepting strings?
+        // Why should I duplicate a regular PHP behavior?
+        // In which way does it prevent from making mistakes?
+        if (!class_exists($id)) {
+            throw new NotFoundException($id);
+        }
+
+        // reflect the class and throw a not found exception when it is an abstract class.
+        $reflection = new \ReflectionClass($id);
+
+        if ($reflection->isAbstract()) {
+            throw new NotFoundException($id);
+        }
+
+        // reflect the constructor of the class and throw a container exception when it is not public.
+        $constructor = $reflection->getConstructor();
+
+        if ($constructor && !$constructor->isPublic()) {
+            throw new NotFoundException($id);
+        }
+
+        // try to associate values to constructor parameters and throw a container exception when
+        // something goes wrong.
+        $args = [];
+
+        $parameters = is_null($constructor) ? [] : $constructor->getParameters();
+
+        foreach ($parameters as $parameter) {
+            [$hasClassName, $className, $error] = $this->typeClassName($parameter);
+
+            if ($hasClassName && $id != $className) {
+                try {
+                    $args[] = $this->get($className);
+                } catch (\Throwable $e) {
+                    throw new ContainerException($this->parameterErrorMessage($id, $className, $parameter), $e);
+                }
+            } elseif ($hasClassName && $id == $className) {
+                throw new ContainerException($this->recursiveErrorMessage($id, $parameter));
+            } elseif ($parameter->isDefaultValueAvailable()) {
+                $args[] = $parameter->getDefaultValue();
+            } elseif ($parameter->allowsNull()) {
+                $args[] = null;
+            } else {
+                throw new ContainerException(sprintf($error, $id, $parameter->getName()));
+            }
+        }
+
+        // cache and return the instance.
+        return $this->cached[$id] = $reflection->newInstance(...$args);
     }
 
     /**
@@ -107,64 +161,73 @@ final class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return array_key_exists($id, $this->map) || class_exists($id);
+        return array_key_exists($id, $this->map);
     }
 
     /**
-     * @param class-string $class
-     * @return object
+     * @return array{0: boolean, 1: string, 2: string}
      */
-    private function autowired(string $class)
+    private function typeClassName(\ReflectionParameter $parameter): array
     {
-        $args = [];
+        $type = $parameter->getType();
 
-        $reflection = new \ReflectionClass($class);
-
-        $constructor = $reflection->getConstructor();
-
-        if (is_null($constructor)) {
-            return new $class;
+        if (is_null($type)) {
+            return [false, '', 'Container cannot instantiate %s: parameter $%s has no type'];
         }
 
-        if (!$constructor->isPublic()) {
-            throw new \LogicException(
-                sprintf('Error while autowiring class %s: constructor is not public', $class)
-            );
+        if ($type instanceof \ReflectionUnionType) {
+            return [false, '', 'Container cannot instantiate %s: parameter $%s has union type'];
         }
 
-        foreach ($constructor->getParameters() as $parameter) {
-            $type = $parameter->getType();
-            $name = $parameter->getName();
-
-            $id = (string) $type;
-
-            if (!$parameter->hasType()) {
-                throw new \LogicException(
-                    sprintf('Error while autowiring class %s: parameter $%s has no type', $class, $name)
-                );
-            }
-
-            if (!$type instanceof \ReflectionNamedType) {
-                throw new \LogicException(
-                    sprintf('Error while autowiring class %s: parameter $%s type is not named', $class, $name)
-                );
-            }
-
-            if ($type->isBuiltin()) {
-                throw new \LogicException(
-                    sprintf('Error while autowiring class %s: parameter $%s type is not a class name', $class, $name)
-                );
-            }
-
-            if (!$this->has($id)) {
-                throw new \LogicException(
-                    sprintf('Error while autowiring class %s: parameter $%s type is not defined in the container (%s)', $class, $name, $id),
-                );
-            }
-
-            $args[] = $this->get($id);
+        if ($type instanceof \ReflectionIntersectionType) {
+            return [false, '', 'Container cannot instantiate %s: parameter $%s has intersection type'];
         }
 
-        return new $class(...$args);
+        if (!$type instanceof \ReflectionNamedType) {
+            // This block never happend. Just pleasing phpstan...
+            throw new \LogicException;
+        }
+
+        if ($type->isBuiltin()) {
+            return [false, '', 'Container cannot instantiate %s: parameter $%s type is not a class name'];
+        }
+
+        return [true, $type->getName(), ''];
+    }
+
+    private function factoryErrorMessage(string $id): string
+    {
+        return sprintf(
+            'Cannot get \'%s\' from the container: factory has thrown an uncaught exception',
+            $id,
+        );
+    }
+
+    private function aliasErrorMessage(string $id, string $value): string
+    {
+        return sprintf(
+            'Cannot get \'%s\' from the container: getting \'%s\' value has thrown an uncaught exception',
+            $id,
+            $value,
+        );
+    }
+
+    private function recursiveErrorMessage(string $id, \ReflectionParameter $parameter): string
+    {
+        return sprintf(
+            'Container cannot instantiate %s: parameter $%s value has the same type, this would trigger infinite recursion',
+            $id,
+            $parameter->getName(),
+        );
+    }
+
+    private function parameterErrorMessage(string $id, string $className, \ReflectionParameter $parameter): string
+    {
+        return sprintf(
+            'Container cannot instantiate %s: getting parameter $%s value has thrown an uncaught exception (type: %s)',
+            $id,
+            $parameter->getName(),
+            $className,
+        );
     }
 }
