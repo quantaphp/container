@@ -27,9 +27,8 @@
         "psr/container": "^2.0"
     },
     "require-dev": {
-        "eloquent/phony-kahlan": "^4.0",
-        "kahlan/kahlan": "^5.0",
-        "phpstan/phpstan": "^1.8"
+        "phpstan/phpstan": "^1.8",
+        "phpunit/phpunit": "^9.5"
     },
     "autoload": {
         "psr-4": {

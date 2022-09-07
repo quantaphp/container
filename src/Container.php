@@ -12,19 +12,9 @@ use Quanta\Container\ContainerException;
 final class Container implements ContainerInterface
 {
     /**
-     * @var array<string, mixed>
+     * @var array<string, null|array{0: mixed, 1?: mixed}>
      */
     private array $map;
-
-    /**
-     * @var array<string, mixed>
-     */
-    private array $cached;
-
-    /**
-     * @var object
-     */
-    private $null;
 
     /**
      * Constructor.
@@ -34,10 +24,6 @@ final class Container implements ContainerInterface
     public function __construct(iterable $map = [])
     {
         $this->map = [];
-        $this->cached = [];
-        $this->null = new class
-        {
-        };
 
         foreach ($map as $id => $value) {
             try {
@@ -50,7 +36,7 @@ final class Container implements ContainerInterface
                 ), 0, $e);
             }
 
-            $this->map[$id] = $value;
+            $this->map[$id] = [$value];
         }
     }
 
@@ -59,21 +45,27 @@ final class Container implements ContainerInterface
      */
     public function get(string $id)
     {
+        // get a ref to the entry.
+        $ref = &$this->map[$id];
+
+        // check if the entry is defined.
+        $defined = !is_null($ref);
+
         // return the cached value when present.
-        if ($cached = $this->cached[$id] ?? $this->null !== $this->null) {
-            return $cached;
+        if ($defined && array_key_exists(1, $ref)) {
+            return $ref[1];
         }
 
-        // check if the given id has been defined and get the associated value.
-        $defined = ($value = $this->map[$id] ?? $this->null) !== $this->null;
+        // get the entry definition if any.
+        $definition = $ref[0] ?? null;
 
         // when the given id is associated to a callable.
         // - execute the callable, cache the result and return it.
         // - any exception thrown by the callable is wrapped in a ContainerException
         //   to trace all failling entries.
-        if ($defined && is_callable($value)) {
+        if ($defined && is_callable($definition)) {
             try {
-                return $this->cached[$id] = $value($this);
+                return $ref[1] = $definition($this);
             } catch (\Throwable $e) {
                 throw new ContainerException($this->factoryErrorMessage($id), $e);
             }
@@ -84,17 +76,17 @@ final class Container implements ContainerInterface
         // - allow to alias an interface without using a factory.
         // - any exception thrown by the container is wrapped in a ContainerException
         //   to trace all failling entries.
-        if ($defined && is_string($value) && interface_exists($id)) {
+        if ($defined && is_string($definition) && interface_exists($id)) {
             try {
-                return $this->cached[$id] = $this->get($value);
+                return $ref[1] = $this->get($definition);
             } catch (\Throwable $e) {
-                throw new ContainerException($this->aliasErrorMessage($id, $value), $e);
+                throw new ContainerException($this->aliasErrorMessage($id, $definition), $e);
             }
         }
 
         // cache any other associated value type and return it.
         if ($defined) {
-            return $this->cached[$id] = $value;
+            return $ref[1] = $definition;
         }
 
         // The given id is not defined in the container so try to instantiate a class named id. Throw a not
@@ -132,15 +124,15 @@ final class Container implements ContainerInterface
         $parameters = is_null($constructor) ? [] : $constructor->getParameters();
 
         foreach ($parameters as $parameter) {
-            [$hasClassName, $className, $error] = $this->typeClassName($parameter);
+            [$hasClass, $class, $error] = $this->typeClass($parameter);
 
-            if ($hasClassName && $id != $className) {
+            if ($hasClass && $id != $class) {
                 try {
-                    $args[] = $this->get($className);
+                    $args[] = $this->get($class);
                 } catch (\Throwable $e) {
-                    throw new ContainerException($this->parameterErrorMessage($id, $className, $parameter), $e);
+                    throw new ContainerException($this->parameterErrorMessage($id, $class, $parameter), $e);
                 }
-            } elseif ($hasClassName && $id == $className) {
+            } elseif ($hasClass && $id == $class) {
                 throw new ContainerException($this->recursiveErrorMessage($id, $parameter));
             } elseif ($parameter->isDefaultValueAvailable()) {
                 $args[] = $parameter->getDefaultValue();
@@ -152,7 +144,7 @@ final class Container implements ContainerInterface
         }
 
         // cache and return the instance.
-        return $this->cached[$id] = $reflection->newInstance(...$args);
+        return $ref[1] = $reflection->newInstance(...$args);
     }
 
     /**
@@ -166,12 +158,12 @@ final class Container implements ContainerInterface
     /**
      * @return array{0: boolean, 1: string, 2: string}
      */
-    private function typeClassName(\ReflectionParameter $parameter): array
+    private function typeClass(\ReflectionParameter $parameter): array
     {
         $type = $parameter->getType();
 
         if (is_null($type)) {
-            return [false, '', 'Container cannot instantiate %s: parameter $%s has no type'];
+            return [false, '', '']; // no type means it is nullable
         }
 
         if ($type instanceof \ReflectionUnionType) {
@@ -191,7 +183,25 @@ final class Container implements ContainerInterface
             return [false, '', 'Container cannot instantiate %s: parameter $%s type is not a class name'];
         }
 
-        return [true, $type->getName(), ''];
+        $class = $type->getName();
+
+        if (!interface_exists($class) && !class_exists($class) && !trait_exists($class)) {
+            return [false, '', sprintf(
+                'Container cannot instantiate %%s: parameter $%%s type %s does not exist',
+                $class
+            )];
+        }
+
+        $reflection = new \ReflectionClass($class);
+
+        if (!$reflection->isInstantiable() && !array_key_exists($class, $this->map)) {
+            return [false, '', sprintf(
+                'Container cannot instantiate %%s: parameter $%%s type %s cannot be instantiated and should be defined in the container',
+                $class,
+            )];
+        }
+
+        return [true, $class, ''];
     }
 
     private function factoryErrorMessage(string $id): string
