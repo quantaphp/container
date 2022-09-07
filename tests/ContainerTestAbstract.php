@@ -26,12 +26,18 @@ abstract class ContainerTestAbstract extends TestCase
         {
         };
 
+        $this->exception = new Exception;
+
         $this->container = $this->getContainer([
             'id' => 'value',
+
+            // simple tests
             'simple.null' => null,
             'simple.true' => true,
             'simple.false' => false,
             'simple.object' => $this->value,
+
+            // callable tests
             'callable.null' => fn () => null,
             'callable.true' => fn () => true,
             'callable.false' => fn () => false,
@@ -39,8 +45,19 @@ abstract class ContainerTestAbstract extends TestCase
             'callable.object.cache' => fn () => new class
             {
             },
+            'callable.throwing' => function () {
+                throw $this->exception;
+            },
+
+            // aliases tests
             TestAliasInterface::class => TestAliasClass::class,
             TestAliasClass::class => new TestAliasClass,
+            TestThrowingAliasInterface::class => TestThrowingAliasClass::class,
+            TestThrowingAliasClass::class => function () {
+                throw $this->exception;
+            },
+
+            // autowiring tests
             TestDepDefinedInterface::class => new TestDepDefinedInterfaceImpl,
             TestDepDefinedAbstract::class => new TestDepDefinedAbstractImpl,
             TestDepDefinedClass::class => new TestDepDefinedClass,
@@ -143,6 +160,14 @@ abstract class ContainerTestAbstract extends TestCase
         $this->assertSame($test1, $test2);
     }
 
+    public function testGetWrapsExceptionsThrownFromCallablesIntoContainerException(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage('Cannot get \'callable.throwing\' from the container: factory has thrown an uncaught exception');
+
+        $this->container->get('callable.throwing');
+    }
+
     public function testGetInterfaceAliases(): void
     {
         $test = $this->container->get(TestAliasInterface::class);
@@ -156,6 +181,18 @@ abstract class ContainerTestAbstract extends TestCase
         $test2 = $this->container->get(TestAliasInterface::class);
 
         $this->assertSame($test1, $test2);
+    }
+
+    public function testGetWrapsExceptionsThrownFromAliasesIntoContainerException(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(sprintf(
+            'Cannot get \'%s\' from the container: getting \'%s\' value has thrown an uncaught exception',
+            TestThrowingAliasInterface::class,
+            TestThrowingAliasClass::class,
+        ));
+
+        $this->container->get(TestThrowingAliasInterface::class);
     }
 
     public function testGetAutowiresClasses(): void

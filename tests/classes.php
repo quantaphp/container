@@ -11,6 +11,15 @@ class TestAliasClass implements TestAliasInterface
 {
 }
 
+// test for throwing interface aliases.
+interface TestThrowingAliasInterface
+{
+}
+
+class TestThrowingAliasClass implements TestThrowingAliasInterface
+{
+}
+
 // test for all handled cases of autowiring.
 class TestAutowiredClass
 {
