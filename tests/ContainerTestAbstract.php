@@ -232,7 +232,6 @@ abstract class ContainerTestAbstract extends TestCase
         $test = $this->container->get(TestAutowiredClass::class);
 
         $this->assertNull($test->dep_undefined_nullable_interface);
-        $this->assertNull($test->dep_undefined_nullable_abstract);
         $this->assertNull($test->dep_nullable_value);
     }
 
@@ -268,42 +267,26 @@ abstract class ContainerTestAbstract extends TestCase
         $this->container->get('not.defined');
     }
 
-    public function testGetThrowsNotFoundExceptionForUndefinedInterface(): void
+    public function testGetThrowsContainerExceptionForUndefinedAbstractClass(): void
     {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestUndefinedInterface::class));
-
-        $this->container->get(TestUndefinedInterface::class);
-    }
-
-    public function testGetThrowsNotFoundExceptionForUndefinedAbstractClass(): void
-    {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestUndefinedAbstractClass::class));
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::abstract(TestUndefinedAbstractClass::class));
 
         $this->container->get(TestUndefinedAbstractClass::class);
     }
 
-    public function testGetThrowsNotFoundExceptionForUndefinedTrait(): void
+    public function testGetThrowsContainerExceptionForClassWithProtectedConstructor(): void
     {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestUndefinedTrait::class));
-
-        $this->container->get(TestUndefinedTrait::class);
-    }
-
-    public function testGetThrowsNotFoundExceptionForClassWithProtectedConstructor(): void
-    {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestClassWithProtectedConstructor::class));
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::private(TestClassWithProtectedConstructor::class));
 
         $this->container->get(TestClassWithProtectedConstructor::class);
     }
 
-    public function testGetThrowsNotFoundExceptionForClassWithPrivateConstructor(): void
+    public function testGetThrowsContainerExceptionForClassWithPrivateConstructor(): void
     {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestClassWithPrivateConstructor::class));
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::private(TestClassWithPrivateConstructor::class));
 
         $this->container->get(TestClassWithPrivateConstructor::class);
     }
@@ -339,66 +322,6 @@ abstract class ContainerTestAbstract extends TestCase
         ));
 
         $this->container->get(TestClassWithBuiltinParameterType::class);
-    }
-
-    public function testGetThrowsContainerExceptionWhenAutowiringClassWithNonExistingParameterType(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeNotFound(
-            TestClassWithNonExistingParameterType::class,
-            'NonExistingClass',
-            'dep',
-        ));
-
-        $this->container->get(TestClassWithNonExistingParameterType::class);
-    }
-
-    public function testGetThrowsContainerExceptionWhenAutowiringClassWithUndefinedInterfaceParameterType(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeUndefined(
-            TestClassWithUndefinedInterfaceParameterType::class,
-            TestUndefinedInterface::class,
-            'dep',
-        ));
-
-        $this->container->get(TestClassWithUndefinedInterfaceParameterType::class);
-    }
-
-    public function testGetThrowsContainerExceptionWhenAutowiringClassWithUndefinedAbstractClassParameterType(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeUndefined(
-            TestClassWithUndefinedAbstractClassParameterType::class,
-            TestUndefinedAbstractClass::class,
-            'dep',
-        ));
-
-        $this->container->get(TestClassWithUndefinedAbstractClassParameterType::class);
-    }
-
-    public function testGetThrowsContainerExceptionWhenAutowiringClassWithProtectedConstructorClassParameterType(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeUndefined(
-            TestClassWithProtectedConstructorClassParameterType::class,
-            TestClassWithProtectedConstructor::class,
-            'dep',
-        ));
-
-        $this->container->get(TestClassWithProtectedConstructorClassParameterType::class);
-    }
-
-    public function testGetThrowsContainerExceptionWhenAutowiringClassWithPrivateConstructorClassParameterType(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeUndefined(
-            TestClassWithPrivateConstructorClassParameterType::class,
-            TestClassWithPrivateConstructor::class,
-            'dep',
-        ));
-
-        $this->container->get(TestClassWithPrivateConstructorClassParameterType::class);
     }
 
     public function testGetThrowsContainerExceptionWhenAutowiredClassHasRecursiveParameter(): void

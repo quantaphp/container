@@ -27,7 +27,6 @@ class TestAutowiredClass
     public $dep_defined_abstract;
     public $dep_defined_class;
     public $dep_undefined_nullable_interface;
-    public $dep_undefined_nullable_abstract;
     public $dep_undefined_class;
     public $dep_nullable_value;
     public $dep_default_value;
@@ -37,7 +36,6 @@ class TestAutowiredClass
         TestDepDefinedAbstract $dep_defined_abstract,
         TestDepDefinedClass $dep_defined_class,
         ?TestDepUndefinedNullableInterface $dep_undefined_nullable_interface,
-        ?TestDepUndefinedNullableAbstract $dep_undefined_nullable_abstract,
         TestDepUndefinedClass $dep_undefined_class,
         ?int $dep_nullable_value,
         int $dep_default_value = 1,
@@ -46,7 +44,6 @@ class TestAutowiredClass
         $this->dep_defined_abstract = $dep_defined_abstract;
         $this->dep_defined_class = $dep_defined_class;
         $this->dep_undefined_nullable_interface = $dep_undefined_nullable_interface;
-        $this->dep_undefined_nullable_abstract = $dep_undefined_nullable_abstract;
         $this->dep_undefined_class = $dep_undefined_class;
         $this->dep_nullable_value = $dep_nullable_value;
         $this->dep_default_value = $dep_default_value;
@@ -148,51 +145,8 @@ final class TestClassWithBuiltinParameterType
     }
 }
 
-final class TestClassWithNonExistingParameterType
-{
-    public function __construct(NonExistingClass $dep)
-    {
-    }
-}
-
-final class TestClassWithUndefinedInterfaceParameterType
-{
-    public function __construct(TestUndefinedInterface $dep)
-    {
-    }
-}
-
-final class TestClassWithUndefinedAbstractClassParameterType
-{
-    public function __construct(TestUndefinedAbstractClass $dep)
-    {
-    }
-}
-
-final class TestClassWithProtectedConstructorClassParameterType
-{
-    public function __construct(TestClassWithProtectedConstructor $dep)
-    {
-    }
-}
-
-final class TestClassWithPrivateConstructorClassParameterType
-{
-    public function __construct(TestClassWithPrivateConstructor $dep)
-    {
-    }
-}
-
 // test for not found interface, abstract class and traits.
-interface TestUndefinedInterface
-{
-}
-
 abstract class TestUndefinedAbstractClass
-{
-}
-
-trait TestUndefinedTrait
 {
 }
 

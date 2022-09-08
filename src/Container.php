@@ -91,14 +91,6 @@ final class Container implements ContainerInterface
 
         // The given id is not defined in the container so try to instantiate a class named id. Throw a not
         // found exception when the id is not an existing class name.
-        //
-        // By the way this is yet nother absolute bullshit from phpstan. It forces to give ReflectionClass an
-        // existing class name whereas it accepts any string and throws when it is not an interface/class/trait
-        // name.
-        //
-        // Why should I typehint a string with a bullshit type to pass it to a constructor accepting strings?
-        // Why should I duplicate a regular PHP behavior?
-        // In which way does it prevent from making mistakes?
         if (!class_exists($id)) {
             throw new NotFoundException($id);
         }
@@ -107,14 +99,14 @@ final class Container implements ContainerInterface
         $reflection = new \ReflectionClass($id);
 
         if ($reflection->isAbstract()) {
-            throw new NotFoundException($id);
+            throw new ContainerException(ContainerException::abstract($id));
         }
 
         // reflect the constructor of the class and throw a container exception when it is not public.
         $constructor = $reflection->getConstructor();
 
         if ($constructor && !$constructor->isPublic()) {
-            throw new NotFoundException($id);
+            throw new ContainerException(ContainerException::private($id));
         }
 
         // try to associate values to constructor parameters and throw a container exception when
@@ -124,22 +116,35 @@ final class Container implements ContainerInterface
         $parameters = is_null($constructor) ? [] : $constructor->getParameters();
 
         foreach ($parameters as $parameter) {
-            [$hasClass, $class, $error, $xs] = $this->typeClass($parameter);
+            $name = $parameter->getName();
+            $type = $parameter->getType();
 
-            if ($hasClass && $id != $class) {
+            $hasDefault = $parameter->isDefaultValueavailable() || $parameter->allowsNull();
+
+            $isDefined = $type instanceof \ReflectionNamedType
+                && !$type->isBuiltin()
+                && $this->has($type->getName());
+
+            if (!$isDefined && $hasDefault) {
+                $args[] = $parameter->isDefaultValueAvailable()
+                    ? $parameter->getDefaultValue()
+                    : null;
+            } elseif ($type instanceof \ReflectionUnionType) {
+                throw new ContainerException(ContainerException::typeUnion($id, $name));
+            } elseif ($type instanceof \ReflectionIntersectionType) {
+                throw new ContainerException(ContainerException::typeIntersection($id, $name));
+            } elseif ($type instanceof \ReflectionNamedType && $type->isBuiltIn()) {
+                throw new ContainerException(ContainerException::typeBuiltin($id, $name));
+            } elseif ($type instanceof \ReflectionNamedType && $id == $type->getName()) {
+                throw new ContainerException(ContainerException::typeRecursive($id, $name));
+            } elseif ($type instanceof \ReflectionNamedType) {
                 try {
-                    $args[] = $this->get($class);
+                    $args[] = $this->get($type->getName());
                 } catch (\Throwable $e) {
-                    throw new ContainerException(ContainerException::typeError($id, $class, $parameter->getName()), $e);
+                    throw new ContainerException(ContainerException::typeError($id, $type->getName(), $name), $e);
                 }
-            } elseif ($hasClass && $id == $class) {
-                throw new ContainerException(ContainerException::typeRecursive($id, $parameter->getName()));
-            } elseif ($parameter->isDefaultValueAvailable()) {
-                $args[] = $parameter->getDefaultValue();
-            } elseif ($parameter->allowsNull()) {
-                $args[] = null;
             } else {
-                throw new ContainerException(sprintf($error, $id, $parameter->getName(), ...$xs));
+                throw new \LogicException;
             }
         }
 
@@ -152,49 +157,6 @@ final class Container implements ContainerInterface
      */
     public function has(string $id): bool
     {
-        return array_key_exists($id, $this->map);
-    }
-
-    /**
-     * @return array{0: boolean, 1: string, 2: string, 3: array<int, string>}
-     */
-    private function typeClass(\ReflectionParameter $parameter): array
-    {
-        $type = $parameter->getType();
-
-        if (is_null($type)) {
-            return [false, '', '', []]; // no type means it is nullable
-        }
-
-        if ($type instanceof \ReflectionUnionType) {
-            return [false, '', ContainerException::TYPE_UNION, []];
-        }
-
-        if ($type instanceof \ReflectionIntersectionType) {
-            return [false, '', ContainerException::TYPE_INTERSECTION, []];
-        }
-
-        if (!$type instanceof \ReflectionNamedType) {
-            // This block never happend. Just pleasing phpstan...
-            throw new \LogicException;
-        }
-
-        if ($type->isBuiltin()) {
-            return [false, '', ContainerException::TYPE_BUILTIN, []];
-        }
-
-        $class = $type->getName();
-
-        if (!interface_exists($class) && !class_exists($class) && !trait_exists($class)) {
-            return [false, '', ContainerException::TYPE_NOT_FOUND, [$class]];
-        }
-
-        $reflection = new \ReflectionClass($class);
-
-        if (!$reflection->isInstantiable() && !array_key_exists($class, $this->map)) {
-            return [false, '', ContainerException::TYPE_UNDEFINED, [$class]];
-        }
-
-        return [true, $class, '', []];
+        return array_key_exists($id, $this->map) || class_exists($id);
     }
 }

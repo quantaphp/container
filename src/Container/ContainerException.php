@@ -10,11 +10,11 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
 {
     const FACTORY = 'Cannot get \'%s\' from the container: factory has thrown an uncaught exception';
     const ALIAS = 'Cannot get \'%s\' from the container: getting \'%s\' value has thrown an uncaught exception';
+    const ABSTRACT = 'Container cannot instantiate abstract class %s';
+    const PRIVATE = 'Container cannot instantiate class with protected/private constructor %s';
     const TYPE_UNION = 'Container cannot instantiate %s: parameter $%s has union type';
     const TYPE_INTERSECTION = 'Container cannot instantiate %s: parameter $%s has intersection type';
     const TYPE_BUILTIN = 'Container cannot instantiate %s: parameter $%s type is not a class name';
-    const TYPE_NOT_FOUND = 'Container cannot instantiate %s: parameter $%s type %s does not exist';
-    const TYPE_UNDEFINED = 'Container cannot instantiate %s: parameter $%s type %s cannot be instantiated and should be defined in the container';
     const TYPE_RECURSIVE = 'Container cannot instantiate %s: parameter $%s value has the same type, this would trigger infinite recursion';
     const TYPE_ERROR = 'Container cannot instantiate %s: getting parameter $%s value has thrown an uncaught exception (type: %s)';
 
@@ -26,6 +26,16 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
     public static function alias(string $id, string $alias): string
     {
         return sprintf(self::ALIAS, $id, $alias);
+    }
+
+    public static function abstract(string $id): string
+    {
+        return sprintf(self::ABSTRACT, $id);
+    }
+
+    public static function private(string $id): string
+    {
+        return sprintf(self::PRIVATE, $id);
     }
 
     public static function typeUnion(string $id, string $param): string
@@ -41,16 +51,6 @@ class ContainerException extends \Exception implements ContainerExceptionInterfa
     public static function typeBuiltin(string $id, string $param): string
     {
         return sprintf(self::TYPE_BUILTIN, $id, $param);
-    }
-
-    public static function typeNotFound(string $id, string $type, string $param): string
-    {
-        return sprintf(self::TYPE_NOT_FOUND, $id, $param, $type);
-    }
-
-    public static function typeUndefined(string $id, string $type, string $param): string
-    {
-        return sprintf(self::TYPE_UNDEFINED, $id, $param, $type);
     }
 
     public static function typeRecursive(string $id, string $param): string
