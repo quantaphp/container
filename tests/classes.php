@@ -2,7 +2,32 @@
 
 declare(strict_types=1);
 
-// test for interface aliases.
+interface TestUndefinedInterface
+{
+}
+
+abstract class TestUndefinedAbstractClass
+{
+}
+
+final class TestUndefinedClass
+{
+}
+
+final class TestUndefinedClassWithProtectedConstructor
+{
+    protected function __construct()
+    {
+    }
+}
+
+final class TestUndefinedClassWithPrivateConstructor
+{
+    private function __construct()
+    {
+    }
+}
+
 interface TestAliasInterface
 {
 }
@@ -11,7 +36,6 @@ class TestAliasClass implements TestAliasInterface
 {
 }
 
-// test for throwing interface aliases.
 interface TestThrowingAliasInterface
 {
 }
@@ -20,70 +44,86 @@ class TestThrowingAliasClass implements TestThrowingAliasInterface
 {
 }
 
-// test for all handled cases of autowiring.
 class TestAutowiredClass
 {
     public $dep_defined_interface;
     public $dep_defined_abstract;
     public $dep_defined_class;
-    public $dep_undefined_nullable_interface;
+    public $dep_defined_class_protected;
+    public $dep_defined_class_private;
+    public $dep_undefined_interface;
     public $dep_undefined_class;
     public $dep_nullable_value;
     public $dep_default_value;
 
     public function __construct(
-        TestDepDefinedInterface $dep_defined_interface,
-        TestDepDefinedAbstract $dep_defined_abstract,
-        TestDepDefinedClass $dep_defined_class,
-        ?TestDepUndefinedNullableInterface $dep_undefined_nullable_interface,
-        TestDepUndefinedClass $dep_undefined_class,
+        TestDefinedInterface $dep_defined_interface,
+        TestDefinedAbstract $dep_defined_abstract,
+        TestDefinedClass $dep_defined_class,
+        TestDefinedClassWithProtectedConstructor $dep_defined_class_protected,
+        TestDefinedClassWithPrivateConstructor $dep_defined_class_private,
+        ?TestUndefinedInterface $dep_undefined_interface,
+        TestUndefinedClass $dep_undefined_class,
         ?int $dep_nullable_value,
         int $dep_default_value = 1,
     ) {
         $this->dep_defined_interface = $dep_defined_interface;
         $this->dep_defined_abstract = $dep_defined_abstract;
         $this->dep_defined_class = $dep_defined_class;
-        $this->dep_undefined_nullable_interface = $dep_undefined_nullable_interface;
+        $this->dep_defined_class_protected = $dep_defined_class_protected;
+        $this->dep_defined_class_private = $dep_defined_class_private;
+        $this->dep_undefined_interface = $dep_undefined_interface;
         $this->dep_undefined_class = $dep_undefined_class;
         $this->dep_nullable_value = $dep_nullable_value;
         $this->dep_default_value = $dep_default_value;
     }
 }
 
-interface TestDepDefinedInterface
+interface TestDefinedInterface
 {
 }
 
-class TestDepDefinedInterfaceImpl implements TestDepDefinedInterface
+class TestDefinedInterfaceImpl implements TestDefinedInterface
 {
 }
 
-abstract class TestDepDefinedAbstract
+abstract class TestDefinedAbstract
 {
 }
 
-final class TestDepDefinedAbstractImpl extends TestDepDefinedAbstract
+final class TestDefinedAbstractImpl extends TestDefinedAbstract
 {
 }
 
-final class TestDepDefinedClass
+final class TestDefinedClass
 {
 }
 
-final class TestDepUndefinedClass
+final class TestDefinedClassWithProtectedConstructor
 {
+    public static function instance(): self
+    {
+        return new self;
+    }
+
+    protected function __construct()
+    {
+    }
 }
 
-interface TestDepUndefinedNullableInterface
+final class TestDefinedClassWithPrivateConstructor
 {
+    public static function instance(): self
+    {
+        return new self;
+    }
+
+    private function __construct()
+    {
+    }
 }
 
-abstract class TestDepUndefinedNullableAbstract
-{
-}
-
-// test for recursive autowiring.
-final class TestAutowiredClassWithDependencies
+final class TestAutowiredClassWithDeepDependencies
 {
     public $dep;
 
@@ -107,7 +147,6 @@ final class TestAutowiredClassDependency2
 {
 }
 
-// test for autowiring errors.
 final class TestClassWithUnionParameterType
 {
     public function __construct(TestUnionDependency1|TestUnionDependency2 $dep)
@@ -145,25 +184,7 @@ final class TestClassWithBuiltinParameterType
     }
 }
 
-// test for not found interface, abstract class and traits.
-abstract class TestUndefinedAbstractClass
-{
-}
-
-final class TestClassWithProtectedConstructor
-{
-    protected function __construct()
-    {
-    }
-}
-
-final class TestClassWithPrivateConstructor
-{
-    private function __construct()
-    {
-    }
-}
-
+// test for classes with recursive parameters.
 final class TestClassWithRecursiveParameter
 {
     public function __construct(TestClassWithRecursiveParameter $dep)
@@ -171,6 +192,7 @@ final class TestClassWithRecursiveParameter
     }
 }
 
+// test for classes having a throwing parameter.
 final class TestClassWithThrowingParameterType
 {
     public function __construct(TestThrowingParameterType $dep)
