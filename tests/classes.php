@@ -209,3 +209,21 @@ final class TestClassWithPrivateConstructor
     {
     }
 }
+
+final class TestClassWithRecursiveParameter
+{
+    public function __construct(TestClassWithRecursiveParameter $dep)
+    {
+    }
+}
+
+final class TestClassWithThrowingParameterType
+{
+    public function __construct(TestThrowingParameterType $dep)
+    {
+    }
+}
+
+final class TestThrowingParameterType
+{
+}

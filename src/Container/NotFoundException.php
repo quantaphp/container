@@ -8,13 +8,15 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class NotFoundException extends \Exception implements NotFoundExceptionInterface
 {
-    /**
-     * Constructor.
-     *
-     * @param string $id
-     */
+    const MESSAGE = 'No \'%s\' entry defined in the container';
+
+    public static function message(string $id): string
+    {
+        return sprintf(self::MESSAGE, $id);
+    }
+
     public function __construct(string $id)
     {
-        parent::__construct(sprintf('No \'%s\' entry defined in the container', $id));
+        parent::__construct(self::message($id));
     }
 }

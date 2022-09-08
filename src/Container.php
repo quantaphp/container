@@ -67,7 +67,7 @@ final class Container implements ContainerInterface
             try {
                 return $ref[1] = $definition($this);
             } catch (\Throwable $e) {
-                throw new ContainerException($this->factoryErrorMessage($id), $e);
+                throw new ContainerException(ContainerException::factory($id), $e);
             }
         }
 
@@ -80,7 +80,7 @@ final class Container implements ContainerInterface
             try {
                 return $ref[1] = $this->get($definition);
             } catch (\Throwable $e) {
-                throw new ContainerException($this->aliasErrorMessage($id, $definition), $e);
+                throw new ContainerException(ContainerException::alias($id, $definition), $e);
             }
         }
 
@@ -124,22 +124,22 @@ final class Container implements ContainerInterface
         $parameters = is_null($constructor) ? [] : $constructor->getParameters();
 
         foreach ($parameters as $parameter) {
-            [$hasClass, $class, $error] = $this->typeClass($parameter);
+            [$hasClass, $class, $error, $xs] = $this->typeClass($parameter);
 
             if ($hasClass && $id != $class) {
                 try {
                     $args[] = $this->get($class);
                 } catch (\Throwable $e) {
-                    throw new ContainerException($this->parameterErrorMessage($id, $class, $parameter), $e);
+                    throw new ContainerException(ContainerException::typeError($id, $class, $parameter->getName()), $e);
                 }
             } elseif ($hasClass && $id == $class) {
-                throw new ContainerException($this->recursiveErrorMessage($id, $parameter));
+                throw new ContainerException(ContainerException::typeRecursive($id, $parameter->getName()));
             } elseif ($parameter->isDefaultValueAvailable()) {
                 $args[] = $parameter->getDefaultValue();
             } elseif ($parameter->allowsNull()) {
                 $args[] = null;
             } else {
-                throw new ContainerException(sprintf($error, $id, $parameter->getName()));
+                throw new ContainerException(sprintf($error, $id, $parameter->getName(), ...$xs));
             }
         }
 
@@ -156,22 +156,22 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * @return array{0: boolean, 1: string, 2: string}
+     * @return array{0: boolean, 1: string, 2: string, 3: array<int, string>}
      */
     private function typeClass(\ReflectionParameter $parameter): array
     {
         $type = $parameter->getType();
 
         if (is_null($type)) {
-            return [false, '', '']; // no type means it is nullable
+            return [false, '', '', []]; // no type means it is nullable
         }
 
         if ($type instanceof \ReflectionUnionType) {
-            return [false, '', 'Container cannot instantiate %s: parameter $%s has union type'];
+            return [false, '', ContainerException::TYPE_UNION, []];
         }
 
         if ($type instanceof \ReflectionIntersectionType) {
-            return [false, '', 'Container cannot instantiate %s: parameter $%s has intersection type'];
+            return [false, '', ContainerException::TYPE_INTERSECTION, []];
         }
 
         if (!$type instanceof \ReflectionNamedType) {
@@ -180,63 +180,21 @@ final class Container implements ContainerInterface
         }
 
         if ($type->isBuiltin()) {
-            return [false, '', 'Container cannot instantiate %s: parameter $%s type is not a class name'];
+            return [false, '', ContainerException::TYPE_BUILTIN, []];
         }
 
         $class = $type->getName();
 
         if (!interface_exists($class) && !class_exists($class) && !trait_exists($class)) {
-            return [false, '', sprintf(
-                'Container cannot instantiate %%s: parameter $%%s type %s does not exist',
-                $class
-            )];
+            return [false, '', ContainerException::TYPE_NOT_FOUND, [$class]];
         }
 
         $reflection = new \ReflectionClass($class);
 
         if (!$reflection->isInstantiable() && !array_key_exists($class, $this->map)) {
-            return [false, '', sprintf(
-                'Container cannot instantiate %%s: parameter $%%s type %s cannot be instantiated and should be defined in the container',
-                $class,
-            )];
+            return [false, '', ContainerException::TYPE_UNDEFINED, [$class]];
         }
 
-        return [true, $class, ''];
-    }
-
-    private function factoryErrorMessage(string $id): string
-    {
-        return sprintf(
-            'Cannot get \'%s\' from the container: factory has thrown an uncaught exception',
-            $id,
-        );
-    }
-
-    private function aliasErrorMessage(string $id, string $value): string
-    {
-        return sprintf(
-            'Cannot get \'%s\' from the container: getting \'%s\' value has thrown an uncaught exception',
-            $id,
-            $value,
-        );
-    }
-
-    private function recursiveErrorMessage(string $id, \ReflectionParameter $parameter): string
-    {
-        return sprintf(
-            'Container cannot instantiate %s: parameter $%s value has the same type, this would trigger infinite recursion',
-            $id,
-            $parameter->getName(),
-        );
-    }
-
-    private function parameterErrorMessage(string $id, string $className, \ReflectionParameter $parameter): string
-    {
-        return sprintf(
-            'Container cannot instantiate %s: getting parameter $%s value has thrown an uncaught exception (type: %s)',
-            $id,
-            $parameter->getName(),
-            $className,
-        );
+        return [true, $class, '', []];
     }
 }
