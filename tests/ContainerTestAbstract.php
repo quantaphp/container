@@ -234,6 +234,46 @@ abstract class ContainerTestAbstract extends TestCase
         $this->container->get(TestThrowingAliasInterface::class);
     }
 
+    public function testGetThrowsNotFoundExceptionForUndefinedId(): void
+    {
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessage(NotFoundException::message('not.defined'));
+
+        $this->container->get('not.defined');
+    }
+
+    public function testGetThrowsNotFoundExceptionForUndefinedInterface(): void
+    {
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessage(NotFoundException::message(TestUndefinedInterface::class));
+
+        $this->container->get(TestUndefinedInterface::class);
+    }
+
+    public function testGetThrowsContainerExceptionForUndefinedAbstractClass(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::abstract(TestUndefinedAbstractClass::class));
+
+        $this->container->get(TestUndefinedAbstractClass::class);
+    }
+
+    public function testGetThrowsContainerExceptionForUndefinedClassWithProtectedConstructor(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::private(TestUndefinedClassWithProtectedConstructor::class));
+
+        $this->container->get(TestUndefinedClassWithProtectedConstructor::class);
+    }
+
+    public function testGetThrowsContainerExceptionForUndefinedClassWithPrivateConstructor(): void
+    {
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(ContainerException::private(TestUndefinedClassWithPrivateConstructor::class));
+
+        $this->container->get(TestUndefinedClassWithPrivateConstructor::class);
+    }
+
     public function testGetAutowiresClasses(): void
     {
         $test = $this->container->get(TestAutowiredClass::class);
@@ -298,46 +338,6 @@ abstract class ContainerTestAbstract extends TestCase
 
         $this->assertSame($test2, $test1->dep);
         $this->assertSame($test3, $test1->dep->dep);
-    }
-
-    public function testGetThrowsNotFoundExceptionForUndefinedId(): void
-    {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message('not.defined'));
-
-        $this->container->get('not.defined');
-    }
-
-    public function testGetThrowsNotFoundExceptionForUndefinedInterface(): void
-    {
-        $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(NotFoundException::message(TestUndefinedInterface::class));
-
-        $this->container->get(TestUndefinedInterface::class);
-    }
-
-    public function testGetThrowsContainerExceptionForUndefinedAbstractClass(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::abstract(TestUndefinedAbstractClass::class));
-
-        $this->container->get(TestUndefinedAbstractClass::class);
-    }
-
-    public function testGetThrowsContainerExceptionForUndefinedClassWithProtectedConstructor(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::private(TestUndefinedClassWithProtectedConstructor::class));
-
-        $this->container->get(TestUndefinedClassWithProtectedConstructor::class);
-    }
-
-    public function testGetThrowsContainerExceptionForUndefinedClassWithPrivateConstructor(): void
-    {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::private(TestUndefinedClassWithPrivateConstructor::class));
-
-        $this->container->get(TestUndefinedClassWithPrivateConstructor::class);
     }
 
     public function testGetThrowsContainerExceptionWhenAutowiringClassWithUnionParameterType(): void
