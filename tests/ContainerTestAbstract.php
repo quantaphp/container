@@ -202,10 +202,12 @@ abstract class ContainerTestAbstract extends TestCase
 
     public function testGetWrapsExceptionsThrownFromCallablesIntoContainerException(): void
     {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::factory('callable.throwing'));
-
-        $this->container->get('callable.throwing');
+        try {
+            $this->container->get('callable.throwing');
+        } catch (ContainerException $e) {
+            $this->assertEquals($e->getMessage(), ContainerException::factory('callable.throwing'));
+            $this->assertSame($e->getPrevious(), $this->exception);
+        }
     }
 
     public function testGetInterfaceAliases(): void
@@ -225,13 +227,16 @@ abstract class ContainerTestAbstract extends TestCase
 
     public function testGetWrapsExceptionsThrownFromAliasesIntoContainerException(): void
     {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::alias(
-            TestThrowingAliasInterface::class,
-            TestThrowingAliasClass::class,
-        ));
+        try {
+            $this->container->get(TestThrowingAliasInterface::class);
+        } catch (ContainerException $e) {
+            $this->assertEquals($e->getMessage(), ContainerException::alias(
+                TestThrowingAliasInterface::class,
+                TestThrowingAliasClass::class,
+            ));
 
-        $this->container->get(TestThrowingAliasInterface::class);
+            $this->assertSame($e->getPrevious()->getPrevious(), $this->exception);
+        }
     }
 
     public function testGetThrowsNotFoundExceptionForUndefinedId(): void
@@ -386,13 +391,16 @@ abstract class ContainerTestAbstract extends TestCase
 
     public function testGetWrapsExceptionsThrownFromParameterTypesIntoContainerException(): void
     {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeError(
-            TestClassWithThrowingParameterType::class,
-            TestThrowingParameterType::class,
-            'dep',
-        ));
+        try {
+            $this->container->get(TestClassWithThrowingParameterType::class);
+        } catch (ContainerException $e) {
+            $this->assertEquals($e->getMessage(), ContainerException::typeError(
+                TestClassWithThrowingParameterType::class,
+                TestThrowingParameterType::class,
+                'dep',
+            ));
 
-        $this->container->get(TestClassWithThrowingParameterType::class);
+            $this->assertSame($e->getPrevious()->getPrevious(), $this->exception);
+        }
     }
 }
