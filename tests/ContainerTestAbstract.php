@@ -82,7 +82,10 @@ abstract class ContainerTestAbstract extends TestCase
         {
             public function getIterator(): Generator
             {
-                yield [] => 'value';
+                yield new class
+                {
+                }
+                    => 'value';
             }
         });
     }
@@ -347,24 +350,36 @@ abstract class ContainerTestAbstract extends TestCase
 
     public function testGetThrowsContainerExceptionWhenAutowiringClassWithUnionParameterType(): void
     {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeUnion(
-            TestClassWithUnionParameterType::class,
-            'dep',
-        ));
+        if (version_compare(PHP_VERSION, '8.0', '>=')) {
+            require_once(__DIR__ . '/classes-8.0.php');
 
-        $this->container->get(TestClassWithUnionParameterType::class);
+            $this->expectException(ContainerException::class);
+            $this->expectExceptionMessage(ContainerException::typeUnion(
+                TestClassWithUnionParameterType::class,
+                'dep',
+            ));
+
+            $this->container->get(TestClassWithUnionParameterType::class);
+        } else {
+            $this->assertTrue(true);
+        }
     }
 
     public function testGetThrowsContainerExceptionWhenAutowiringClassWithIntersectionParameterType(): void
     {
-        $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(ContainerException::typeIntersection(
-            TestClassWithIntersectionParameterType::class,
-            'dep',
-        ));
+        if (version_compare(PHP_VERSION, '8.1', '>=')) {
+            require_once(__DIR__ . '/classes-8.1.php');
 
-        $this->container->get(TestClassWithIntersectionParameterType::class);
+            $this->expectException(ContainerException::class);
+            $this->expectExceptionMessage(ContainerException::typeIntersection(
+                TestClassWithIntersectionParameterType::class,
+                'dep',
+            ));
+
+            $this->container->get(TestClassWithIntersectionParameterType::class);
+        } else {
+            $this->assertTrue(true);
+        }
     }
 
     public function testGetThrowsContainerExceptionWhenAutowiringClassWithBuiltinParameterType(): void

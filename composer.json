@@ -23,7 +23,6 @@
         "sort-packages": true
     },
     "require": {
-        "php": ">=7.4",
         "psr/container": "^2.0"
     },
     "require-dev": {

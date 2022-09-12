@@ -65,7 +65,7 @@ class TestAutowiredClass
         ?TestUndefinedInterface $dep_undefined_interface,
         TestUndefinedClass $dep_undefined_class,
         ?int $dep_nullable_value,
-        int $dep_default_value = 1,
+        int $dep_default_value = 1
     ) {
         $this->dep_defined_interface = $dep_defined_interface;
         $this->dep_defined_abstract = $dep_defined_abstract;
@@ -144,36 +144,6 @@ final class TestAutowiredClassDependency1
 }
 
 final class TestAutowiredClassDependency2
-{
-}
-
-final class TestClassWithUnionParameterType
-{
-    public function __construct(TestUnionDependency1|TestUnionDependency2 $dep)
-    {
-    }
-}
-
-final class TestUnionDependency1
-{
-}
-
-final class TestUnionDependency2
-{
-}
-
-final class TestClassWithIntersectionParameterType
-{
-    public function __construct(TestIntersectionDependency1&TestIntersectionDependency2 $dep)
-    {
-    }
-}
-
-final class TestIntersectionDependency1
-{
-}
-
-final class TestIntersectionDependency2
 {
 }
 

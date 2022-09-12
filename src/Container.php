@@ -32,7 +32,7 @@ final class Container implements ContainerInterface
                 throw new \InvalidArgumentException(sprintf(
                     'Argument 1 passed to %s::__construct() must be an iterable with stringable keys, %s given',
                     self::class,
-                    gettype($id),
+                    gettype($id)
                 ), 0, $e);
             }
 
