@@ -122,19 +122,18 @@ $container->get(SomeImplementation::class) === $container->get(SomeImplementatio
 
 ## Autowiring
 
-The container will try to build instances of non defined classes using simple rules:
+The container will try to build instances of non defined classes using simple rules to infer constructor parameter values:
 
-- when the type of a constructor parameter is an interface/class name, its value will be retrieved
-from the container (and also autowired if needed for class names)
-- when the type of a constructor parameter is not a class name:
-    - default value is used when defined
-    - null is used when the parameter has no default value and is nullable
-    - a `Quanta\Container\ContainerException` is thrown otherwise
+- when the type of a parameter is a defined interface name, its value is retrieved from the container
+- when the type of a parameter is a class name, its value is retrieved from the container (and also autowired if not defined)
+- when the type of a parameter is not an interface/class name, its default value is used if present
+- null is used as a fallback when the parameter allows null
+- a `Quanta\Container\ContainerException` is thrown when:
+    - no value can be infered for a parameter (not interface/class name as type, no default value, not nullable)
+    - trying to infer the value of a parameter with union/intersection type, without default value, not allowing null (php 8.0/8.1)
+    - trying to autowire an abstract class or a class with protected/private constructor
 - the `->has()` method returns true for any existing classes
 - the objects built through autowiring are cached
-- a `Quanta\Container\ContainerException` is thrown when autowiring an abstract class or a class with
-protected/private constructor
-- php 8.0/8.1 => a `Quanta\Container\ContainerException` is thrown for parameter with union/intersection type
 
 A factory must be defined when more control over the class instantiation is needed.
 
