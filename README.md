@@ -20,8 +20,8 @@ basic autowiring mechanism.
 
 **Testing a specific php version using docker:**
 
-- `docker build . --build-arg PHP_VERSION=7.4 --tag quanta-container-tests:7.4`
-- `docker run --rm quanta-container-tests:7.4`
+- `docker build . --build-arg PHP_VERSION=7.4 --tag quanta/container/tests:7.4`
+- `docker run --rm quanta/container/tests:7.4`
 
 ## Basic usage
 
@@ -129,7 +129,7 @@ The container will try to build instances of non defined classes using simple ru
 - when the type of a parameter is not an interface/class name, its default value is used if present
 - null is used as a fallback when the parameter allows null
 - a `Quanta\Container\ContainerException` is thrown when:
-    - no value can be infered for a parameter (not interface/class name as type, no default value, not nullable)
+    - no value can be infered for a parameter (not an interface/class name as type, no default value, not allowing null)
     - trying to infer the value of a parameter with union/intersection type, without default value, not allowing null (php 8.0/8.1)
     - trying to autowire an abstract class or a class with protected/private constructor
 - the `->has()` method returns true for any existing classes
