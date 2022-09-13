@@ -25,14 +25,15 @@ basic autowiring mechanism.
 
 ## Basic usage
 
+- container entries are defined using any iterable as long as keys can be casted as strings
+- any non callable value is returned as is like an associative array
+- any callable value is treated as a factory building the associated value (the results are cached so
+the callable is run only once and the same value is returned on every ->get() call)
+
 ```php
 <?php
 
-// - container entries are defined using any iterable as long as keys can be casted as strings
-// - any non callable value is returned as is like an associative array
-// - any callable value is treated as a factory building the associated value (the results
-//   are cached so the callable is run only once and the same value is returned on every
-//   get call)
+// container configuration
 $container = new Quanta\Container([
     'id' => 'value',
 
@@ -47,31 +48,30 @@ $container = new Quanta\Container([
     },
 ]);
 
-// true
-$container instanceof Psr\Container\ContainerInterface;
+final class SomeService
+{
+    public function __construct(public SomeDependency $dependency)
+    {
+    }
+}
 
 // true
+$container instanceof Psr\Container\ContainerInterface;
 $container->has('id');
 $container->has(SomeService::class);
 $container->has(SomeDependency::class);
 $container->has('throwing');
+$container->get('id') === 'value';
+$container->get(SomeService::class) == new SomeService(new SomeDependency);
+$container->get(SomeDependency::class) == new SomeDependency;
+$container->get(SomeService::class) === $container->get(SomeService::class);
+$container->get(SomeDependency::class) === $container->get(SomeDependency::class);
+$container->get(SomeService::class)->dependency === $container->get(SomeDependency::class);
 
 // false
 $container->has('not.defined');
 
-// 'value'
-$container->get('id');
-
-// new SomeService(new SomeDependency)
-$container->get(SomeService::class);
-
-// new SomeDependency
-$container->get(SomeDependency::class);
-
-// true
-$container->get(SomeService::class) === $container->get(SomeService::class);
-
-// Throws Quanta\Container\NotFoundException
+// throws Quanta\Container\NotFoundException
 try {
     $container->get('not.defined');
 }
@@ -81,7 +81,7 @@ catch (Quanta\Container\NotFoundException $e) {
     echo $e->getMessage() . "\n";
 }
 
-// Throws Quanta\Container\ContainerException with the caught exception as previous
+// throws Quanta\Container\ContainerException with the caught exception as previous
 try {
     $container->get('throwing');
 }
@@ -97,47 +97,47 @@ catch (Quanta\Container\ContainerException $e) {
 
 ## Interface aliasing
 
+- interface names associated to strings are treated as aliases
+
 ```php
-// interface names associated to strings are treated as aliases
+
+// container configuration
 $container = new Quanta\Container([
     SomeInterface::class => SomeImplementation::class,
 
     SomeImplementation::class => fn () => new SomeImplementation,
 ]);
 
-// new SomeImplementation
-$container->get(SomeInterface::class);
-
 // true
+$container->get(SomeInterface::class) == new SomeImplementation;
+$container->get(SomeInterface::class) === $container->get(SomeInterface::class);
 $container->get(SomeInterface::class) === $container->get(SomeImplementation::class);
+$container->get(SomeImplementation::class) === $container->get(SomeImplementation::class);
 ```
 
 ## Autowiring
 
+The container will try to build instances of non defined classes using simple rules:
+
+- when the type of a constructor parameter is an interface/class name, its value will be retrieved
+from the container (and also autowired if needed for class names)
+- when the type of a constructor parameter is not a class name:
+    - default value is used when defined
+    - null is used when the parameter has no default value and is nullable
+    - an Quanta\Container\ContainerException is thrown otherwise
+- the $container->has() method returns true for any existing classes
+- the objects built through autowiring are cached
+- autowiring an abstract class throws a Quanta\Container\ContainerException
+- autowiring a class with protected/private constructor throws a Quanta\Container\ContainerException
+- php 8.0 => constructor parameter with union type throws a Quanta\Container\ContainerException
+- php 8.1 => constructor parameter with intersection type throws a Quanta\Container\ContainerException
+
+A factory must be defined when more control over the class instantiation is needed.
+
 ```php
 <?php
 
-// the container will try to build instances of non defined classes using simple rules
-//
-// - when the type of a constructor parameter is an interface/class name, its value will be retrieved
-//   from the container (and also autowired if needed for class names)
-//
-// - when the type of a constructor parameter is not a class name:
-//     - default value is used when defined
-//     - null is used when the parameter has no default value and is nullable
-//     - an Quanta\Container\ContainerException is thrown otherwise
-//
-// - the $container->has() method returns true for any existing classes
-//
-// - the objects built through autowiring are cached
-//
-// - autowiring an abstract class throws a Quanta\Container\ContainerException
-// - autowiring a class with protected/private constructor throws a Quanta\Container\ContainerException
-// - php 8.0 => constructor parameter with union type throws a Quanta\Container\ContainerException
-// - php 8.1 => constructor parameter with intersection type throws a Quanta\Container\ContainerException
-//
-// a factory must be defined when more control over the class instantiation is needed
-
+// container configuration
 $container = new Quanta\Container([
     SomeInterface::class => SomeImplementation::class,
 ]);
