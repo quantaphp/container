@@ -28,7 +28,7 @@ basic autowiring mechanism.
 - container entries are defined using any iterable as long as keys can be casted as strings
 - any non callable value is returned as is like an associative array
 - any callable value is treated as a factory building the associated value (the results are cached so
-the callable is run only once and the same value is returned on every ->get() call)
+the callable is run only once and the same value is returned on every `->get()` call)
 
 ```php
 <?php
@@ -37,7 +37,7 @@ the callable is run only once and the same value is returned on every ->get() ca
 $container = new Quanta\Container([
     'id' => 'value',
 
-    SomeService::class => fn ($container) => new SomeService(
+    SomeClass::class => fn ($container) => new SomeClass(
         $container->get(SomeDependency::class),
     ),
 
@@ -48,7 +48,7 @@ $container = new Quanta\Container([
     },
 ]);
 
-final class SomeService
+final class SomeClass
 {
     public function __construct(public SomeDependency $dependency)
     {
@@ -58,15 +58,15 @@ final class SomeService
 // true
 $container instanceof Psr\Container\ContainerInterface;
 $container->has('id');
-$container->has(SomeService::class);
+$container->has(SomeClass::class);
 $container->has(SomeDependency::class);
 $container->has('throwing');
 $container->get('id') === 'value';
-$container->get(SomeService::class) == new SomeService(new SomeDependency);
+$container->get(SomeClass::class) == new SomeClass(new SomeDependency);
 $container->get(SomeDependency::class) == new SomeDependency;
-$container->get(SomeService::class) === $container->get(SomeService::class);
+$container->get(SomeClass::class) === $container->get(SomeClass::class);
 $container->get(SomeDependency::class) === $container->get(SomeDependency::class);
-$container->get(SomeService::class)->dependency === $container->get(SomeDependency::class);
+$container->get(SomeClass::class)->dependency === $container->get(SomeDependency::class);
 
 // false
 $container->has('not.defined');
@@ -109,7 +109,12 @@ $container = new Quanta\Container([
 ]);
 
 // true
+$container->has(SomeInterface::class);
+$container->has(SomeImplementation::class);
+
 $container->get(SomeInterface::class) == new SomeImplementation;
+$container->get(SomeImplementation::class) == new SomeImplementation;
+
 $container->get(SomeInterface::class) === $container->get(SomeInterface::class);
 $container->get(SomeInterface::class) === $container->get(SomeImplementation::class);
 $container->get(SomeImplementation::class) === $container->get(SomeImplementation::class);
@@ -124,13 +129,12 @@ from the container (and also autowired if needed for class names)
 - when the type of a constructor parameter is not a class name:
     - default value is used when defined
     - null is used when the parameter has no default value and is nullable
-    - an Quanta\Container\ContainerException is thrown otherwise
-- the $container->has() method returns true for any existing classes
+    - a `Quanta\Container\ContainerException` is thrown otherwise
+- the `->has()` method returns true for any existing classes
 - the objects built through autowiring are cached
-- autowiring an abstract class throws a Quanta\Container\ContainerException
-- autowiring a class with protected/private constructor throws a Quanta\Container\ContainerException
-- php 8.0 => constructor parameter with union type throws a Quanta\Container\ContainerException
-- php 8.1 => constructor parameter with intersection type throws a Quanta\Container\ContainerException
+- a `Quanta\Container\ContainerException` is thrown when autowiring an abstract class or a class with
+protected/private constructor
+- php 8.0/8.1 => a `Quanta\Container\ContainerException` is thrown for parameter with union/intersection type
 
 A factory must be defined when more control over the class instantiation is needed.
 
@@ -155,21 +159,22 @@ final class UndefinedClass
 }
 
 // true
+$container->has(SomeInterface::class);
+$container->has(SomeImplementation::class);
 $container->has(UndefinedClass::class);
+$container->has(AnotherUndefinedClass::class);
 
-// new UndefinedClass
-$container->get(UndefinedClass::class);
+$container->get(SomeInterface::class) == new SomeImplementation;
+$container->get(SomeImplementation::class) == new SomeImplementation;
+$container->get(UndefinedClass::class) == new UndefinedClass(new SomeImplementation, new AnotherUndefinedClass);
+$container->get(AnotherUndefinedClass::class) == new AnotherUndefinedClass;
 
-// true
-$container->get(UndefinedClass::class) === $container->get(UndefinedClass::class);
+$container->get(SomeInterface::class) === $container->get(SomeInterface::class);
+$container->get(SomeInterface::class) === $container->get(SomeImplementation::class);
+$container->get(SomeImplementation::class) === $container->get(SomeImplementation::class)
+$container->get(UndefinedClass::class) === new $container->get(UndefinedClass::class);
+$container->get(AnotherUndefinedClass::class) === $container->get(AnotherUndefinedClass::class);
 
-// true
-$container->get(UndefinedClass::class) == new UndefinedClass(
-    $container->get(SomeInterface::class),
-    $container->get(AnotherUndefinedClass::class),
-);
-
-// true
 $container->get(UndefinedClass::class)->dependency1 === $container->get(SomeInterface::class);
 $container->get(UndefinedClass::class)->dependency2 === $container->get(AnotherUndefinedClass::class);
 $container->get(UndefinedClass::class)->dependency3 === null;
