@@ -33,6 +33,18 @@ the callable is run only once and the same value is returned on every `->get()` 
 ```php
 <?php
 
+// class definitions
+final class SomeClass
+{
+    public function __construct(public SomeDependency $dependency)
+    {
+    }
+}
+
+final class SomeDependency
+{
+}
+
 // container configuration
 $container = new Quanta\Container([
     'id' => 'value',
@@ -47,13 +59,6 @@ $container = new Quanta\Container([
         throw new Exception('some exception');
     },
 ]);
-
-final class SomeClass
-{
-    public function __construct(public SomeDependency $dependency)
-    {
-    }
-}
 
 // true
 $container instanceof Psr\Container\ContainerInterface;
@@ -74,9 +79,7 @@ $container->has('not.defined');
 // throws Quanta\Container\NotFoundException
 try {
     $container->get('not.defined');
-}
-
-catch (Quanta\Container\NotFoundException $e) {
+} catch (Quanta\Container\NotFoundException $e) {
     // 'No 'not.defined' entry defined in the container'
     echo $e->getMessage() . "\n";
 }
@@ -84,9 +87,7 @@ catch (Quanta\Container\NotFoundException $e) {
 // throws Quanta\Container\ContainerException with the caught exception as previous
 try {
     $container->get('throwing');
-}
-
-catch (Quanta\Container\ContainerException $e) {
+} catch (Quanta\Container\ContainerException $e) {
     // 'Cannot get 'throwing' from the container: factory has thrown an uncaught exception'
     echo $e->getMessage() . "\n";
 
@@ -100,6 +101,15 @@ catch (Quanta\Container\ContainerException $e) {
 - interface names associated to strings are treated as aliases
 
 ```php
+
+// class definitions
+interface SomeInterface
+{
+}
+
+final class SomeImplementation implements SomeInterface
+{
+}
 
 // container configuration
 $container = new Quanta\Container([
@@ -140,10 +150,18 @@ A factory must be defined when more control over the class instantiation is need
 ```php
 <?php
 
-// container configuration
-$container = new Quanta\Container([
-    SomeInterface::class => SomeImplementation::class,
-]);
+// class definitions
+interface SomeInterface
+{
+}
+
+final class SomeImplementation implements SomeInterface
+{
+}
+
+final class AnotherUndefinedClass
+{
+}
 
 final class UndefinedClass
 {
@@ -153,9 +171,13 @@ final class UndefinedClass
         public ?int $dependency3,
         public string $dependency4 = 'test',
     ) {
-
     }
 }
+
+// container configuration
+$container = new Quanta\Container([
+    SomeInterface::class => SomeImplementation::class,
+]);
 
 // true
 $container->has(SomeInterface::class);
@@ -165,13 +187,13 @@ $container->has(AnotherUndefinedClass::class);
 
 $container->get(SomeInterface::class) == new SomeImplementation;
 $container->get(SomeImplementation::class) == new SomeImplementation;
-$container->get(UndefinedClass::class) == new UndefinedClass(new SomeImplementation, new AnotherUndefinedClass);
+$container->get(UndefinedClass::class) == new UndefinedClass(new SomeImplementation, new AnotherUndefinedClass, null);
 $container->get(AnotherUndefinedClass::class) == new AnotherUndefinedClass;
 
 $container->get(SomeInterface::class) === $container->get(SomeInterface::class);
 $container->get(SomeInterface::class) === $container->get(SomeImplementation::class);
-$container->get(SomeImplementation::class) === $container->get(SomeImplementation::class)
-$container->get(UndefinedClass::class) === new $container->get(UndefinedClass::class);
+$container->get(SomeImplementation::class) === $container->get(SomeImplementation::class);
+$container->get(UndefinedClass::class) === $container->get(UndefinedClass::class);
 $container->get(AnotherUndefinedClass::class) === $container->get(AnotherUndefinedClass::class);
 
 $container->get(UndefinedClass::class)->dependency1 === $container->get(SomeInterface::class);
